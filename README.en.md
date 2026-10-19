@@ -18,9 +18,8 @@ Install it into your AI assistant with one sentence. It finds out which competit
 
 **Free and open source** · **No server** · **One-sentence install** · **English and Chinese**
 
-[![GitHub stars](https://img.shields.io/github/stars/Fangx-AI/geo-doctor?style=social)](https://github.com/Fangx-AI/geo-doctor/stargazers)
 [![test](https://github.com/Fangx-AI/geo-doctor/actions/workflows/test.yml/badge.svg)](https://github.com/Fangx-AI/geo-doctor/actions/workflows/test.yml)
-[![License: MIT](https://img.shields.io/badge/skill-MIT-blue.svg)](skills/geo-doctor/SKILL.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 [🎬 Demo](#demo) · [📦 Install](#install) · [🩺 What it does](#what) · [❓ FAQ](#faq) · [🧰 No-install audit](#quickstart) · [📛 Badge](#badge) · [📚 Handbook](#handbook) · [中文](README.md)
 
@@ -195,4 +194,4 @@ All sources verified on 2026-10-14. Contributions (especially cases with disclos
 
 If this helps you, a ⭐ star helps others find it.
 
-<sub>geo-doctor (GEO 医生, formerly GEO-Playbook) · Generative Engine Optimization playbook. Text, templates and diagrams: [CC BY 4.0](LICENSE). Scripts: [MIT](scripts/LICENSE).</sub>
+<sub>geo-doctor (GEO 医生, formerly GEO-Playbook) · Generative Engine Optimization playbook. Code and skill: [MIT](LICENSE). Text, templates and diagrams: [CC BY 4.0](LICENSE-docs.md). Project summary for AI: [llms.txt](llms.txt).</sub>

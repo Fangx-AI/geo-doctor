@@ -12,7 +12,8 @@
   "files": [
     "cli/geo-audit.mjs",
     "cli/geo-publish.mjs",
-    "cli/geo-probe.mjs"
+    "cli/geo-probe.mjs",
+    "LICENSE-docs.md"
   ],
   "engines": {
     "node": ">=18"

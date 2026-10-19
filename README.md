@@ -20,10 +20,9 @@
 
 **免费开源** · **不用服务器** · **一句话安装** · **中英双语** · 已在 WorkBuddy 实测可用
 
-[![GitHub stars](https://img.shields.io/github/stars/Fangx-AI/geo-doctor?style=social)](https://github.com/Fangx-AI/geo-doctor/stargazers)
 [![test](https://github.com/Fangx-AI/geo-doctor/actions/workflows/test.yml/badge.svg)](https://github.com/Fangx-AI/geo-doctor/actions/workflows/test.yml)
 [![资料核验](https://img.shields.io/badge/资料核验-2026--10--14-2ea44f)](docs/handbook.md#evidence)
-[![License: MIT](https://img.shields.io/badge/skill-MIT-blue.svg)](skills/geo-doctor/SKILL.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 [🎬 看演示](#demo) · [📦 安装](#install) · [🩺 它会做什么](#what) · [❓ 常见问题](#faq) · [🧰 不装也能用](#quickstart) · [📚 GEO 实战手册](docs/handbook.md) · [English](README.en.md)
@@ -169,4 +168,4 @@ GEO 医生背后的方法都写成了公开手册，每条结论附官方原文�
 
 ---
 
-<sub>geo-doctor（GEO 医生，原 GEO-Playbook）· GEO 实战手册 · AI 搜索优化 / GEO 优化中文指南。结构参考 [Maxime Labonne 的 LLM Course](https://github.com/mlabonne/llm-course)。原创文字、模板与图解采用 [CC BY 4.0](LICENSE)；脚本采用 [MIT](scripts/LICENSE)。外部文章、论文、代码、商标和图片保留各自权利。图片说明见 [assets/README.md](assets/README.md)。</sub>
+<sub>geo-doctor（GEO 医生，原 GEO-Playbook）· GEO 实战手册 · AI 搜索优化 / GEO 优化中文指南。结构参考 [Maxime Labonne 的 LLM Course](https://github.com/mlabonne/llm-course)。代码和 skill 采用 [MIT](LICENSE)；原创文字、模板与图解采用 [CC BY 4.0](LICENSE-docs.md)。外部文章、论文、代码、商标和图片保留各自权利。图片说明见 [assets/README.md](assets/README.md)。给 AI 读的项目简介：[llms.txt](llms.txt)。</sub>

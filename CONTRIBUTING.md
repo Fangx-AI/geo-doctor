@@ -64,4 +64,4 @@
 
 不熟悉 Git 的贡献者可以用 Issue 提交原文链接和简短说明；熟悉 Git 的贡献者提交聚焦一个主题的 Pull Request。发布仓库后使用 GitHub 自带入口即可。
 
-提交的原创文字使用本项目 CC BY 4.0 许可；引用的第三方材料需保留其作者和原许可范围。
+提交的代码使用 MIT 许可（见 [LICENSE](LICENSE)），原创文字使用 CC BY 4.0 许可（见 [LICENSE-docs.md](LICENSE-docs.md)）；参与讨论请遵守[行为准则](CODE_OF_CONDUCT.md)，安全问题请按 [SECURITY.md](SECURITY.md) 私下报告；引用的第三方材料需保留其作者和原许可范围。
