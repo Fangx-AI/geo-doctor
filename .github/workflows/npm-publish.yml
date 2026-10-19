@@ -1,0 +1,38 @@
+name: npm-publish
+# Publishes the CLIs (geo-audit, geo-probe, geo-publish) to npm as `geo-doctor`, so users can run
+# `npx geo-doctor <url>` instead of `npx github:Fangx-AI/geo-doctor`.
+# Runs on every published release and on demand. Needs the repository secret NPM_TOKEN
+# (npmjs.com → Access Tokens → Granular, read and write on geo-doctor); without it the job skips.
+# A version already on npm is skipped, so bump package.json "version" to publish a new one.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm test
+      - id: check
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::notice::NPM_TOKEN is not set; skipping npm publish."; echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          V=$(node -p "require('./package.json').version")
+          if npm view "geo-doctor@$V" version >/dev/null 2>&1; then
+            echo "::notice::geo-doctor@$V is already on npm; bump package.json version to publish."; echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - if: steps.check.outputs.skip != 'true'
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

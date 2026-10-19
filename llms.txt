@@ -1,0 +1,43 @@
+# GEO 医生 (geo-doctor)
+
+> Open-source, bilingual (Chinese/English) Agent Skill and zero-dependency Node CLIs for GEO (generative engine optimization): find out why AI assistants such as Doubao, DeepSeek, Yuanbao, Qwen, Kimi, ChatGPT, Claude, Perplexity and Gemini do or don't recommend a product, fix the facts and pages they read, write fact-based content, and re-measure the recommendation rate. MIT-licensed code; it does not promise rankings.
+
+GEO 医生是一个开源的中英双语 GEO（生成式引擎优化）技能：装进 Claude Code、Codex、WorkBuddy 等 AI 助手后，说"帮我做 GEO"，它按"问诊 → 体检 → 事实卡 → 问题集 → 采样 → 诊断 → 写内容 → 发布 → 复查"九步，查清 AI 推荐了哪些竞品、为什么不是你、引用了哪些网站，再用同一批问题复查推荐率。只用用户提供的真实事实，不承诺排名。
+
+Install: send this to an AI assistant that supports skills: "帮我安装这个 skill：https://github.com/Fangx-AI/geo-doctor/tree/master/skills/geo-doctor"
+
+## Skill
+
+- [SKILL.md](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/SKILL.md): entry point and the nine-step workflow
+- [01 Audit](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/01-audit.md): can AI crawlers fetch and read the page (robots.txt, firewall, noindex, JS-only pages, structured data)
+- [02 Fact card](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/02-fact-card.md): one verified source of truth for product facts
+- [03 Questions](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/03-questions.md): the question set real users ask AI
+- [04 Sampling](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/04-sampling.md): ask AI assistants by hand or through their APIs and record every answer
+- [05 Diagnosis](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/05-diagnosis.md): who gets recommended, which sources AI cites, and where the gaps are
+- [06 Writing](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/06-writing.md): fact-based content AI is willing to cite
+- [07 Publishing](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/07-publishing.md): publish to your own site automatically; third-party platforms are packaged for a human to post
+- [08 Retest](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/08-retest.md): re-ask the same questions and compare recommendation rates
+- [AI sources (China)](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/ai-sources-cn.md) and [AI sources (global)](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/ai-sources-global.md): where each AI assistant gets its answers
+- [Compliance](https://github.com/Fangx-AI/geo-doctor/blob/master/skills/geo-doctor/references/compliance.md): what not to do (fake reviews, ranking promises, invented data)
+
+## Command-line tools
+
+- [geo-audit](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-audit.mjs): `npx github:Fangx-AI/geo-doctor <url>` checks AI crawler access, indexing, content in raw HTML and structured data; `--badge` and `--card` make a score badge and a share image
+- [geo-probe](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-probe.mjs): asks DeepSeek, Qwen, Kimi, Doubao, OpenAI, Perplexity, Gemini, Claude and others through their APIs and counts who gets recommended
+- [geo-publish](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-publish.mjs): checks a batch of drafts against the fact card, publishes to a static site or WordPress, and packages posts for other platforms
+- [Install guide](https://github.com/Fangx-AI/geo-doctor/blob/master/docs/install.md): per-platform install notes and test results
+
+## Handbook (Chinese)
+
+- [GEO 实战手册](https://github.com/Fangx-AI/geo-doctor/blob/master/docs/handbook.md): routes for websites, mini programs, software, local business, e-commerce, B2B, creators and multilingual sites
+- [基础课](https://github.com/Fangx-AI/geo-doctor/blob/master/docs/basics.md): how AI search finds, reads and cites pages
+- [测量](https://github.com/Fangx-AI/geo-doctor/blob/master/docs/measurement.md): how to measure AI visibility without fooling yourself
+- [常见误区](https://github.com/Fangx-AI/geo-doctor/blob/master/docs/myths.md): GEO myths and what the evidence says
+- [研究与出处](https://github.com/Fangx-AI/geo-doctor/blob/master/docs/research.md): the papers and open-source code GEO comes from
+
+## Optional
+
+- [English README](https://github.com/Fangx-AI/geo-doctor/blob/master/README.en.md)
+- [Chinese README](https://github.com/Fangx-AI/geo-doctor/blob/master/README.md)
+- [Contributing](https://github.com/Fangx-AI/geo-doctor/blob/master/CONTRIBUTING.md)
+- [Releases](https://github.com/Fangx-AI/geo-doctor/releases): geo-doctor.zip for platforms that install skills by upload
