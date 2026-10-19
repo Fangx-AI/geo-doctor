@@ -1,7 +1,7 @@
 {
   "name": "geo-doctor",
   "description": "GEO 医生：中英双语 GEO（生成式引擎优化）全流程 skill",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "author": { "name": "Fangx-AI" },
   "homepage": "https://github.com/Fangx-AI/geo-doctor",
   "repository": "https://github.com/Fangx-AI/geo-doctor",

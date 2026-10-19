@@ -88,6 +88,19 @@ status: draft
 2. **合规**：对照 [compliance.md](compliance.md) 的自检清单。
 3. **标注**：提醒用户按平台要求标注 AI 生成，发布前自己通读一遍。
 
+## 用 API 批量起草（可选）
+
+用户有模型 API Key、缺口题很多时，可以先让脚本按缺口起草，再由你逐篇核对、修改：
+
+```bash
+DEEPSEEK_API_KEY=… node <技能目录>/scripts/geo-autopilot.mjs gaps            # 列出缺口题（读 geo/runs.csv 里最近一批 API 采样）
+DEEPSEEK_API_KEY=… node <技能目录>/scripts/geo-autopilot.mjs write --ai deepseek --max 3
+```
+
+- 只给还没有草稿的缺口题写，每题一篇；提示词只放事实卡里"已确认"的事实，并要求不编数字、不写评价、写清不适合谁。
+- 写好的稿存进 `geo/drafts/`，带 `qid`（题号）和 `generated_by`（用了哪个模型），状态是 `draft`，并自动跑一遍下面的检查。
+- 这只是初稿：你仍要按本页规则逐句核对事实编号，删掉事实卡里没有的说法，再请用户确认。
+
 ## 用脚本检查整批草稿
 
 能运行命令时，写完一批先跑（`scripts/geo-publish.mjs` 在本技能目录里，也可以用 npx）：

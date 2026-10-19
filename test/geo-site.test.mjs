@@ -223,6 +223,8 @@ test('action writes a GitHub Pages workflow once and never overwrites it', async
   assert.equal(await main(['action', '--file', file], quiet()), 0);
   const yml = readFileSync(file, 'utf8');
   assert.equal(yml, workflowYaml());
+  assert.match(yml, /if: github.ref == format\('refs\/heads\/\{0\}', github.event.repository.default_branch\)/, 'deploys only from the default branch, whatever its name');
+  assert.doesNotMatch(yml, /branches: \[main, master\]/);
   assert.match(yml, /actions\/deploy-pages@v4/);
   assert.match(yml, /geo-site build --facts "geo\/fact-card.yaml"/);
   assert.match(yml, /geo-audit/);

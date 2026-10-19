@@ -9,7 +9,7 @@
       "name": "geo-doctor",
       "source": "./",
       "description": "让软件、产品、网站、小程序被豆包、DeepSeek、元宝、千问、文心、Kimi、ChatGPT、Claude、Perplexity、Gemini、Copilot 找到、说对、推荐和引用：体检 → 事实卡 → 问题集 → 采样 → 诊断 → 写内容 → 发布指导 → 复查",
-      "version": "0.5.0"
+      "version": "0.6.0"
     }
   ]
 }
