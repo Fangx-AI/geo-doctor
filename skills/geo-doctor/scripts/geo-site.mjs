@@ -446,7 +446,6 @@ export function workflowYaml({ facts = 'geo/fact-card.yaml', drafts = 'geo/draft
 # 只需设置一次：Settings → Pages → Source 选 "GitHub Actions"。
 on:
   push:
-    branches: [main, master]
     paths: ['geo/**', '.github/workflows/geo-site.yml']
   workflow_dispatch:
 permissions:
@@ -458,6 +457,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
+    # Publish from the default branch only, whatever it is called; other branches (such as review PRs) never go live.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     environment:
       name: github-pages

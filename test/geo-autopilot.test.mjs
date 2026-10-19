@@ -96,6 +96,26 @@ test('findGaps: a competitor recommended more often than us is a gap; drafts are
   assert.equal(findGaps({ rows, questions, drafts }).gaps[0].draft, 'a.md');
 });
 
+test('findGaps judges each AI on its own batch: wins on one AI never hide a gap on another', () => {
+  const row = (batch, platform, ours, who) => ({ '批次': batch, '平台': platform, '入口': 'API', '日期': '2026-10-19', '问题id': 'Q01', '回答状态': '完整', '是否推荐我们': ours, '推荐了谁': who, '引用来源': '' });
+  const rows = [
+    row('ds', 'DeepSeek', '否', '随手记'), row('ds', 'DeepSeek', '否', '随手记'),
+    row('km', 'Kimi', '推荐', '小鹿记账'), row('km', 'Kimi', '推荐', '小鹿记账'), row('km', 'Kimi', '推荐', '小鹿记账;随手记'),
+  ];
+  const questions = [{ id: 'Q01', cls: 'A', question: '离线记账？' }];
+  const { gaps } = findGaps({ rows, questions });
+  assert.equal(gaps.length, 1, 'pooled, 3 vs 3 would hide the DeepSeek gap');
+  assert.deepEqual(gaps[0].platforms.map((p) => [p.platform, p.ours, p.of]), [['DeepSeek', 0, 2]]);
+});
+
+test('findGaps classifies each batch by the question set it was asked with', () => {
+  const rows = [{ '批次': 'b1', '平台': 'DeepSeek', '入口': 'API', '日期': '2026-10-19', '问题id': 'Q09', '回答状态': '完整', '是否推荐我们': '否', '推荐了谁': '随手记', '引用来源': '' }];
+  const questions = [{ id: 'Q09', cls: 'B', question: '后来改成品牌题' }];
+  assert.equal(findGaps({ rows, questions }).gaps.length, 0);
+  const snapshots = new Map([['b1', new Map([['Q09', { id: 'Q09', cls: 'A', question: '当时的推荐题' }]])]]);
+  assert.equal(findGaps({ rows, questions, snapshots }).gaps.length, 1);
+});
+
 test('parseWriterOutput reads the header, strips a fence and a repeated H1, and rejects junk', () => {
   const p = parseWriterOutput('```markdown\nTITLE: 标题\nSLUG: a-b\nDESCRIPTION: 说明\nFACTS: [B01]，F01\n---\n# 标题\n\n正文\n```');
   assert.deepEqual(p, { title: '标题', slug: 'a-b', description: '说明', facts: ['B01', 'F01'], body: '正文' });
@@ -136,7 +156,7 @@ test('weekly: samples, drafts the gap, writes a report and a PR body', async () 
   const report = readFileSync(join(d, 'geo', 'reports', '2026-10-19.md'), 'utf8');
   assert.match(report, /\| DeepSeek \| 2026-10-19-deepseek-api-01 \| 2026-10-19 \| 2\/4 \|/);
   assert.match(report, /DeepSeek：这是第一批/);
-  assert.match(report, /\| Q01 \| 有没有不用联网也能用的记账 App？ \| 0\/2 \| 随手记 2，鲨鱼记账 2 \| offline-budget-app\.md \|/);
+  assert.match(report, /\| Q01 \| 有没有不用联网也能用的记账 App？ \| DeepSeek \| 0\/2 \| 随手记 2，鲨鱼记账 2 \| offline-budget-app\.md \|/);
   const pr = readFileSync(join(d, 'pr.md'), 'utf8');
   assert.match(pr, /geo\/drafts\/offline-budget-app\.md/);
   assert.match(pr, /合并前请逐篇读一遍/);
@@ -181,13 +201,22 @@ test('gaps and errors: missing key, missing config, unknown AI', async () => {
   await run(d, ['weekly'], { fetchImpl: fakeApi({ answers: ROUND1 }).fetchImpl, now: () => new Date('2026-10-19T09:00:00') });
   const g = await run(d, ['gaps']);
   assert.equal(g.code, 0);
-  assert.match(g.out, /Q01 有没有不用联网也能用的记账 App？\n  你被推荐 0\/2 次；随手记 2 次，鲨鱼记账 2 次\n  已有草稿：offline-budget-app\.md/);
+  assert.match(g.out, /Q01 有没有不用联网也能用的记账 App？\n  DeepSeek：你被推荐 0\/2 次；随手记 2 次，鲨鱼记账 2 次\n  已有草稿：offline-budget-app\.md/);
   assert.equal((await run(d, ['write', '--ai', 'deepseek'], { env: {} })).code, 2);
   assert.equal((await run(d, ['write', '--ai', 'nope'])).code, 2);
   rmSync(join(d, 'geo', 'autopilot.json'));
   const w = await run(d, ['weekly']);
   assert.equal(w.code, 2);
   assert.match(w.err, /geo-autopilot action/);
+});
+
+test('weekly stops when the probe gets no valid answers, so stale data never becomes a report', async () => {
+  const d = project();
+  const fetchImpl = async () => ({ ok: false, status: 500, json: async () => ({}), text: async () => 'boom' });
+  const r = await run(d, ['weekly'], { fetchImpl, now: () => new Date('2026-10-19T09:00:00') });
+  assert.notEqual(r.code, 0);
+  assert.ok(!existsSync(join(d, 'geo', 'reports')));
+  assert.ok(!existsSync(join(d, 'geo', 'drafts')));
 });
 
 test('action writes the workflow and a config template once', async () => {

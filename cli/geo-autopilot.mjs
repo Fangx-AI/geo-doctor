@@ -58,7 +58,7 @@ API Key 只从环境变量读取（例如 DEEPSEEK_API_KEY），不要写在命�
     noRuns: (f) => `${f} 里还没有 API 采样记录，先运行 geo-probe run`,
     noGaps: '没有缺口：最近一批采样里，没有哪道 A 类题是竞品被推荐得比你多。',
     gapsTitle: (n, batches) => `找到 ${n} 道缺口题（来自 ${batches.join('、')}）：`,
-    gapLine: (g) => `- ${g.id} ${g.question}\n  你被推荐 ${g.ours}/${g.of} 次；${g.winners.map((w) => `${w.name} ${w.n} 次`).join('，')}${g.draft ? `\n  已有草稿：${g.draft}` : ''}`,
+    gapLine: (g) => `- ${g.id} ${g.question}${g.platforms.map((p) => `\n  ${p.platform}：你被推荐 ${p.ours}/${p.of} 次；${p.winners.map((w) => `${w.name} ${w.n} 次`).join('，')}`).join('')}${g.draft ? `\n  已有草稿：${g.draft}` : ''}`,
     noFacts: (f) => `找不到事实卡：${f}`,
     fewFacts: '事实卡里还没有"已确认"的事实，写不了稿。先完成第 2 步。',
     nothingToWrite: '所有缺口题都已经有草稿了。',
@@ -76,14 +76,14 @@ API Key 只从环境变量读取（例如 DEEPSEEK_API_KEY），不要写在命�
   2. Settings → Actions → General → Workflow permissions，勾选 "Allow GitHub Actions to create and approve pull requests"
   3. 在 Actions 页面手动运行一次 geo-autopilot，看看第一份 PR`,
     actionExists: (f) => `${f} 已存在，没有覆盖；要重写请先删除它。`,
-    probeFailed: '采样失败，本周没有新数据。',
+    probeFailed: '采样没有全部成功（至少一个 AI 没有拿到有效回答），本周不写稿、不出报告。检查 API Key 和额度后重跑。',
     report: {
       title: (d) => `GEO 医生每周复查 · ${d}`,
       note: '以下是 API 自动采样：不登录、多数不联网，和用户在 App 里看到的可能不同；"是否推荐"是关键词初判，需复核。重要结论请在 App 里人工确认。',
       trend: '推荐率趋势（A 类题）', trendHead: '| 平台 | 批次 | 日期 | 推荐率 | 提及率 | 推荐最多的竞品 |',
       changes: (p, a, b) => `${p}：${b} 对比 ${a}`, changesHead: '| 题 | 问题 | 上次被推荐 | 这次被推荐 |',
       noChange: '和上次相比，每道题的推荐次数都没有变化。', firstBatch: (p) => `${p}：这是第一批，下周开始能看到变化。`,
-      gaps: '还没补上的缺口', gapsHead: '| 题 | 问题 | 你 | 推荐了谁 | 草稿 |', noGaps: '最近一批采样里没有缺口。',
+      gaps: '还没补上的缺口', gapsHead: '| 题 | 问题 | 平台 | 你 | 推荐了谁 | 草稿 |', noGaps: '最近一批采样里没有缺口。',
       none: '—', pct: ratio,
     },
     pr: {
@@ -144,7 +144,7 @@ API keys are read only from environment variables (e.g. OPENAI_API_KEY); never p
     noRuns: (f) => `No API samples in ${f} yet; run geo-probe run first`,
     noGaps: 'No gaps: in the latest sample no type-A question recommends a competitor more often than you.',
     gapsTitle: (n, batches) => `${n} gap questions (from ${batches.join(', ')}):`,
-    gapLine: (g) => `- ${g.id} ${g.question}\n  You: ${g.ours}/${g.of}; ${g.winners.map((w) => `${w.name} ${w.n}`).join(', ')}${g.draft ? `\n  Draft: ${g.draft}` : ''}`,
+    gapLine: (g) => `- ${g.id} ${g.question}${g.platforms.map((p) => `\n  ${p.platform}: you ${p.ours}/${p.of}; ${p.winners.map((w) => `${w.name} ${w.n}`).join(', ')}`).join('')}${g.draft ? `\n  Draft: ${g.draft}` : ''}`,
     noFacts: (f) => `Fact card not found: ${f}`,
     fewFacts: 'The fact card has no confirmed facts yet, so nothing can be drafted. Finish step 2 first.',
     nothingToWrite: 'Every gap question already has a draft.',
@@ -162,14 +162,14 @@ Next:
   2. Settings → Actions → General → Workflow permissions: tick "Allow GitHub Actions to create and approve pull requests"
   3. Run geo-autopilot once from the Actions tab and look at the first pull request`,
     actionExists: (f) => `${f} already exists and was left alone; delete it to regenerate.`,
-    probeFailed: 'Sampling failed; no new data this week.',
+    probeFailed: 'Sampling did not fully succeed (at least one AI returned no valid answers), so no drafts or report this week. Check the API keys and quota, then run again.',
     report: {
       title: (d) => `GEO Doctor weekly check · ${d}`,
       note: 'These are automatic API samples: no login, usually no web search, so they may differ from what people see in the apps. "Recommended" is a keyword first pass; review it, and confirm important conclusions in the apps.',
       trend: 'Recommendation rate (type-A questions)', trendHead: '| AI | Batch | Date | Recommended | Mentioned | Most recommended rival |',
       changes: (p, a, b) => `${p}: ${b} vs ${a}`, changesHead: '| Q | Question | Last time | This time |',
       noChange: 'No question changed since last time.', firstBatch: (p) => `${p}: first batch; changes show from next week.`,
-      gaps: 'Open gaps', gapsHead: '| Q | Question | You | Recommended instead | Draft |', noGaps: 'No gaps in the latest sample.',
+      gaps: 'Open gaps', gapsHead: '| Q | Question | AI | You | Recommended instead | Draft |', noGaps: 'No gaps in the latest sample.',
       none: '—', pct: ratio,
     },
     pr: {
@@ -235,19 +235,45 @@ export function questionStats(rows, batches, classOf) {
 
 const sorted = (m) => [...m.entries()].sort((a, b) => b[1] - a[1]).map(([name, n]) => ({ name, n }));
 
-// A gap: some competitor was recommended more often than we were. 缺口：有竞品比你被推荐得多。
-export function findGaps({ rows, questions, drafts = [], batches = latestBatches(rows), priority = new Map() }) {
-  const text = new Map(questions.map((q) => [q.id, q]));
-  const classOf = (r) => text.get(r['问题id'])?.cls || '';
-  const draftFor = (id, question) => drafts.find((d) => d.meta.qid === id || (question && d.meta.question === question));
-  const gaps = [];
-  for (const s of questionStats(rows, batches, classOf).values()) {
-    const winners = sorted(s.winners);
-    if (!winners.length || winners[0].n <= s.ours) continue;
-    const q = text.get(s.id);
-    gaps.push({ id: s.id, question: q?.question || s.id, ours: s.ours, of: s.of, winners, sources: sorted(s.sources).slice(0, 5).map((x) => x.name),
-      draft: draftFor(s.id, q?.question)?.file || null, core: /核心|core|high/i.test(priority.get(s.id) || '') });
+// Each batch is classified by the question set it was asked with (geo-probe archives runs/<batch>/questions.csv),
+// so editing questions.csv later never rewrites history. 每批按当时的问题集快照归类，改问题集不会改写历史。
+export function loadSnapshots(runsDir, batches) {
+  const snaps = new Map();
+  for (const b of batches) {
+    const f = join(runsDir, b, 'questions.csv');
+    if (existsSync(f)) snaps.set(b, new Map(loadQuestions(readFileSync(f, 'utf8')).asked.map((q) => [q.id, q])));
   }
+  return snaps;
+}
+const classifier = (questions, snapshots) => {
+  const current = new Map(questions.map((q) => [q.id, q]));
+  return (r) => (snapshots.get(r['批次'])?.get(r['问题id']) || current.get(r['问题id']))?.cls || '';
+};
+
+// A gap: on some AI, a competitor was recommended more often than we were. Each AI is judged on its own latest
+// batch, so one AI's wins never hide another's gap. 缺口：在某个 AI 上有竞品比你被推荐得多；各 AI 分开判断。
+export function findGaps({ rows, questions, drafts = [], batches = latestBatches(rows), priority = new Map(), snapshots = new Map() }) {
+  const text = new Map(questions.map((q) => [q.id, q]));
+  const classOf = classifier(questions, snapshots);
+  const platformOf = new Map(rows.map((r) => [r['批次'], r['平台']]));
+  const draftFor = (id, question) => drafts.find((d) => d.meta.qid === id || (question && d.meta.question === question));
+  const merged = new Map();
+  for (const b of batches) {
+    for (const s of questionStats(rows, [b], classOf).values()) {
+      const winners = sorted(s.winners);
+      if (!winners.length || winners[0].n <= s.ours) continue;
+      if (!merged.has(s.id)) merged.set(s.id, { id: s.id, ours: 0, of: 0, winners: new Map(), sources: new Map(), platforms: [] });
+      const g = merged.get(s.id);
+      g.ours += s.ours; g.of += s.of; g.platforms.push({ platform: platformOf.get(b) || b, batch: b, ours: s.ours, of: s.of, winners });
+      for (const [k, v] of s.winners) g.winners.set(k, (g.winners.get(k) || 0) + v);
+      for (const [k, v] of s.sources) g.sources.set(k, (g.sources.get(k) || 0) + v);
+    }
+  }
+  const gaps = [...merged.values()].map((g) => {
+    const q = text.get(g.id) || [...snapshots.values()].map((m) => m.get(g.id)).find(Boolean);
+    return { ...g, question: q?.question || g.id, winners: sorted(g.winners), sources: sorted(g.sources).slice(0, 5).map((x) => x.name),
+      draft: draftFor(g.id, q?.question)?.file || null, core: /核心|core|high/i.test(priority.get(g.id) || '') };
+  });
   return { batches, gaps: gaps.sort((a, b) => (b.core - a.core) || ((b.winners[0].n - b.ours) - (a.winners[0].n - a.ours)) || a.id.localeCompare(b.id)) };
 }
 
@@ -342,16 +368,18 @@ export async function writeDrafts({ gaps, facts, factsRaw, draftsDir, writer, br
 
 // ---------------------------------------------------------------- report
 
-export function buildReport({ rows, questions, drafts = [], lang = 'zh', date = today() }) {
+export function buildReport({ rows, questions, drafts = [], lang = 'zh', date = today(), snapshots = new Map() }) {
   const t = M[lang].report; const L = [`# ${t.title(date)}`, '', `> ${t.note}`, ''];
   const cls = new Map(questions.map((q) => [q.id, q.cls]));
   const text = new Map(questions.map((q) => [q.id, q.question]));
-  const groups = summarize(rows, cls).sort((a, b) => a.platform.localeCompare(b.platform) || a.batch.localeCompare(b.batch));
+  const byBatch = new Map([...snapshots].map(([b, m]) => [b, new Map([...m].map(([id, q]) => [id, q.cls]))]));
+  const groups = summarize(rows, cls, byBatch).sort((a, b) => a.platform.localeCompare(b.platform) || a.batch.localeCompare(b.batch));
   const dateOf = new Map(rows.map((r) => [r['批次'], r['日期']]));
   L.push(`## ${t.trend}`, '', t.trendHead, '| --- | --- | --- | --- | --- | --- |');
   for (const g of groups) L.push(`| ${g.platform} | ${g.batch} | ${dateOf.get(g.batch) || ''} | ${t.pct(g.recommend.n, g.recommend.of)} | ${t.pct(g.mention.n, g.mention.of)} | ${g.board[0] ? `${g.board[0].name} ${g.board[0].n}/${g.board[0].of}` : t.none} |`);
   L.push('');
-  const classOf = (r) => cls.get(r['问题id']) || '';
+  const classOf = classifier(questions, snapshots);
+  for (const m of snapshots.values()) for (const [id, q] of m) if (!text.has(id)) text.set(id, q.question);
   const byPlatform = new Map();
   for (const g of groups) { if (!byPlatform.has(g.platform)) byPlatform.set(g.platform, []); byPlatform.get(g.platform).push(g.batch); }
   for (const [platform, list] of byPlatform) {
@@ -370,12 +398,12 @@ export function buildReport({ rows, questions, drafts = [], lang = 'zh', date = 
     }
     L.push('');
   }
-  const { gaps } = findGaps({ rows, questions, drafts });
+  const { gaps } = findGaps({ rows, questions, drafts, snapshots });
   L.push(`## ${t.gaps}`, '');
   if (!gaps.length) L.push(t.noGaps, '');
   else {
-    L.push(t.gapsHead, '| --- | --- | --- | --- | --- |');
-    for (const g of gaps) L.push(`| ${g.id} | ${g.question} | ${g.ours}/${g.of} | ${g.winners.map((w) => `${w.name} ${w.n}`).join(lang === 'zh' ? '，' : ', ')} | ${g.draft || t.none} |`);
+    L.push(t.gapsHead, '| --- | --- | --- | --- | --- | --- |');
+    for (const g of gaps) for (const p of g.platforms) L.push(`| ${g.id} | ${g.question} | ${p.platform} | ${p.ours}/${p.of} | ${p.winners.map((w) => `${w.name} ${w.n}`).join(lang === 'zh' ? '，' : ', ')} | ${g.draft || t.none} |`);
     L.push('');
   }
   return L.join('\n');
@@ -507,7 +535,8 @@ export async function main(argv, { env = process.env, out = console.log, err = c
   if (o.cmd === 'weekly') {
     const code = await probeMain(['run', qFile, '--ai', String(cfg.ai), '--brand', String(cfg.brand), ...(cfg.competitors ? ['--competitors', String(cfg.competitors)] : []),
       '--times', String(cfg.times || 2), '--runs', runsFile, '--lang', lang], { env, out, err, fetchImpl, sleep, now });
-    if (code === 2) { err(t.probeFailed); return 2; }
+    // Any failed AI stops the run: a PR built on empty samples would report gaps (or none) that are not real.
+    if (code !== 0) { err(t.probeFailed); return code; }
   }
 
   if (!existsSync(runsFile)) { err(t.noRuns(runsFile)); return o.cmd === 'gaps' || o.cmd === 'report' ? 1 : 2; }
@@ -518,9 +547,11 @@ export async function main(argv, { env = process.env, out = console.log, err = c
   const questions = loadQuestions(readFileSync(qFile, 'utf8')).asked;
   const priority = new Map(qRows.map((r) => [(r.id || r.ID || '').trim(), r['优先级'] || r.priority || '']));
   const drafts = existsSync(draftsDir) ? loadDrafts(resolve(draftsDir)) : [];
+  const snapshots = () => loadSnapshots(join(dirname(runsFile), 'runs'), [...new Set(loadRuns(runsFile).map((r) => r['批次']))]);
+  const snaps = snapshots();
 
   if (o.cmd === 'gaps') {
-    const { batches, gaps } = findGaps({ rows, questions, drafts, priority });
+    const { batches, gaps } = findGaps({ rows, questions, drafts, priority, snapshots: snaps });
     if (o.json) { out(JSON.stringify({ batches, gaps }, null, 2)); return 0; }
     if (!gaps.length) { out(t.noGaps); return 0; }
     out(t.gapsTitle(gaps.length, batches)); for (const g of gaps) out(t.gapLine(g));
@@ -539,7 +570,7 @@ export async function main(argv, { env = process.env, out = console.log, err = c
     if (!spec) { err(t.need('--ai')); return 2; }
     let writer;
     try { writer = resolveWriter(spec.trim(), env, t); } catch (e) { err(e.message); return 2; }
-    const { gaps } = findGaps({ rows, questions, drafts, priority });
+    const { gaps } = findGaps({ rows, questions, drafts, priority, snapshots: snaps });
     if (!gaps.length) out(t.noGaps);
     else written = await writeDrafts({ gaps, facts, factsRaw, draftsDir, writer, brand, lang, max: parseInt(o.max || cfg.maxDrafts || '3', 10) || 3,
       ready: o.cmd === 'weekly' ? cfg.autoConfirm !== false : !!o.ready, out, err, fetchImpl, sleep, date });
@@ -548,7 +579,7 @@ export async function main(argv, { env = process.env, out = console.log, err = c
 
   // report (and the end of weekly)
   const after = existsSync(draftsDir) ? loadDrafts(resolve(draftsDir)) : [];
-  const report = buildReport({ rows: loadRuns(runsFile), questions, drafts: after, lang, date });
+  const report = buildReport({ rows: loadRuns(runsFile), questions, drafts: after, lang, date, snapshots: snapshots() });
   const outFile = o.out || join(geo, 'reports', `${date}.md`);
   mkdirSync(dirname(outFile), { recursive: true }); writeFileSync(outFile, report); out(t.wrote(outFile));
   if (o.prBody) { writeFileSync(o.prBody, prBody({ report, written, lang })); out(t.wrote(o.prBody)); }
