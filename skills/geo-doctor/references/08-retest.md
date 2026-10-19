@@ -39,6 +39,25 @@
 - 把百分点写成百分比：37.5% → 75% 是增加 37.5 个百分点，不是增加 37.5%。
 - 把一次偶然的好结果截图当成结论。
 
+## 每周自动复查（自动驾驶，可选）
+
+用户的项目放在 GitHub 上、又有模型 API Key 时，可以把第 4 到 8 步交给一个每周自动运行的工作流：
+
+```bash
+node <技能目录>/scripts/geo-autopilot.mjs action
+```
+
+它会写两个文件：
+
+- `.github/workflows/geo-autopilot.yml`：每周一自动运行。依次用 `geo-probe` 重新采样（新批次，不覆盖旧原文），找出"竞品被推荐、你没有"的缺口题，给还没有草稿的缺口各写一篇（默认最多 3 篇，只用已确认的事实），写一份疗效报告 `geo/reports/日期.md`，最后开一个 PR。
+- `geo/autopilot.json`：品牌和别名、竞品、要问的 AI、每题问几次、用哪个模型写稿、每周最多写几篇、`autoConfirm`（检查无错误的稿件是否直接标为 confirmed）。
+
+请用户做三件事：在仓库的 Actions secrets 里添加用到的 API Key；在 Settings → Actions → General 勾选 "Allow GitHub Actions to create and approve pull requests"；在 Actions 页面手动运行一次。
+
+告诉用户：**PR 就是审核。** 合并前逐篇读一遍；合并即同意发布标为 confirmed 的稿件（配合第 7 步的 `geo-site action`，事实站会自动更新）；不想发的稿件把 status 改成 draft 再合并。疗效报告只写次数、不写百分比，并注明 API 采样和 App 内可能不同，重要结论仍要在 App 里人工采样确认。
+
+不在 GitHub 上时，可以每周手动跑一次 `geo-autopilot weekly`，效果相同，只是不会开 PR。
+
 ## 下一轮
 
 把没改善的题回到第 5 步重新诊断，开新的处方。GEO 是持续的过程，不是做一次就结束。

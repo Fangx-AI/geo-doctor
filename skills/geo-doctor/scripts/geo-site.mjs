@@ -446,6 +446,7 @@ export function workflowYaml({ facts = 'geo/fact-card.yaml', drafts = 'geo/draft
 # 只需设置一次：Settings → Pages → Source 选 "GitHub Actions"。
 on:
   push:
+    branches: [main, master]
     paths: ['geo/**', '.github/workflows/geo-site.yml']
   workflow_dispatch:
 permissions:
