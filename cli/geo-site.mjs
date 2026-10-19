@@ -71,7 +71,7 @@ export function parseFactCard(text) {
       continue;
     }
     if (!section) continue;
-    if (listKey && indent > listIndent && body.startsWith('- ') && !/^-\s+[^:]+:\s/.test(body)) {
+    if (listKey && indent > listIndent && body.startsWith('- ') && !/^-\s+(?!["'])[^:]+:\s/.test(body)) {
       entry[listKey].push(unquote(body.slice(2))); continue;
     }
     listKey = null;
@@ -166,7 +166,7 @@ const M = {
   --lang zh|en       页面语言，默认按事实卡判断
   --dry-run          只列出要写的文件
   --version / --help`,
-    need: (x) => `缺少 ${x}`, noFacts: (f) => `找不到事实卡：${f}`,
+    need: (x) => `缺少 ${x}`, noFacts: (f) => `找不到事实卡：${f}`, noDrafts: (d) => `找不到文章目录：${d}`,
     missingCore: (ids) => `事实卡里 ${ids.join('、')} 还没有"已确认"，事实站至少需要名称（B01）和一句话说明（B03）。`,
     wrote: (f) => `✅ 已写入 ${f}`, removed: (f) => `🗑  已删除上次生成、这次不再发布的 ${f}`, dry: (f) => `（试运行）将写入 ${f}`,
     skippedFacts: (n) => `ℹ️  ${n} 条事实还不是"已确认"，没有放进事实站。`,
@@ -210,7 +210,7 @@ Options:
   --lang zh|en       Page language (default: guessed from the fact card)
   --dry-run          List the files without writing them
   --version / --help`,
-    need: (x) => `Missing ${x}`, noFacts: (f) => `Fact card not found: ${f}`,
+    need: (x) => `Missing ${x}`, noFacts: (f) => `Fact card not found: ${f}`, noDrafts: (d) => `Drafts directory not found: ${d}`,
     missingCore: (ids) => `${ids.join(', ')} not confirmed in the fact card. The site needs at least the name (B01) and one-line summary (B03).`,
     wrote: (f) => `✅ Wrote ${f}`, removed: (f) => `🗑  Removed ${f} (generated last time, not published any more)`, dry: (f) => `(dry run) would write ${f}`,
     skippedFacts: (n) => `ℹ️  ${n} facts are not confirmed yet and were left out.`,
@@ -313,6 +313,8 @@ function offers(facts) {
   return out;
 }
 
+const IDENTITY = /应用商店|应用市场|app ?store|google play|官方(账号|帐号|主页)|official (account|profile|page)|百科|wikipedia|wikidata/i;
+
 export function structuredData(facts, { url = null } = {}) {
   const m = siteModel(facts);
   const software = /软件|app|应用|网站|小程序|saas|software|web|plugin|插件|extension/i.test(m.kind);
@@ -327,7 +329,8 @@ export function structuredData(facts, { url = null } = {}) {
   }
   if (m.company) thing[software ? 'publisher' : 'brand'] = { '@type': 'Organization', name: m.company };
   const o = offers(facts); if (o.length) thing.offers = o;
-  const sameAs = byPrefix(facts, 'E').map((e) => text(e.url || e.value)).filter(isUrl);
+  // sameAs is for listings that identify the product (store pages, official accounts), not supporting evidence.
+  const sameAs = byPrefix(facts, 'E').filter((e) => IDENTITY.test(text(e.type))).map((e) => text(e.url || e.value)).filter(isUrl);
   if (sameAs.length) thing.sameAs = sameAs;
   if (url) thing.mainEntityOfPage = url;
   return thing;
@@ -538,7 +541,8 @@ export async function main(argv, { out = console.log, err = console.error } = {}
   if (unconfirmed) err(t.skippedFacts(unconfirmed));
 
   let articles = [];
-  if (o.drafts && existsSync(o.drafts)) {
+  if (o.drafts && !existsSync(o.drafts)) { err(t.noDrafts(o.drafts)); return 2; }
+  if (o.drafts) {
     const drafts = loadDrafts(resolve(o.drafts));
     const issues = checkDrafts(drafts, { facts: parseFacts(raw), lang });
     const bad = new Set(issues.filter((x) => x.level === 'error').map((x) => x.file));

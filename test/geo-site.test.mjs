@@ -51,7 +51,7 @@ const CARD = `# 事实卡
     价格: "¥18/年"
     包含:
       - 多账本
-      - 导出 Excel
+      - "导出: Excel"
     状态: 已确认
 使用条件:
   - 编号: C01
@@ -67,6 +67,10 @@ const CARD = `# 事实卡
   - 编号: E01
     类型: 应用商店
     地址: "https://apps.example.com/fawn"
+    状态: 已确认
+  - 编号: E02
+    类型: 媒体报道
+    地址: "https://news.example.com/fawn-review"
     状态: 已确认
 维护:
   确认人: "张三"
@@ -104,7 +108,8 @@ test('parseFactCard reads sections, inline and block lists, comments and the mai
   assert.deepEqual(s['基本信息'][1]['内容'], ['Fawn Budget', '小鹿']);
   assert.equal(s['基本信息'][2]['内容'], '不联网也能用的个人记账 App');
   assert.equal(s['核心能力'][0]['来源'], '帮助中心 #2', 'a # inside quotes is not a comment');
-  assert.deepEqual(s['价格'][0]['包含'], ['多账本', '导出 Excel']);
+  assert.deepEqual(s['价格'][0]['包含'], ['多账本', '导出: Excel'], 'a quoted list value with a colon stays in the list');
+  assert.equal(s['价格'][0]['状态'], '已确认');
   assert.deepEqual(s['使用条件'][0]['内容'], ['iOS', 'Android']);
   assert.equal(s['维护']['确认日期'], '2026-10-18');
 });
@@ -137,7 +142,7 @@ test('structured data: SoftwareApplication with offers, platforms and sameAs', (
   assert.deepEqual(ld.alternateName, ['Fawn Budget', '小鹿']);
   assert.equal(ld.operatingSystem, 'iOS, Android');
   assert.deepEqual(ld.offers[0], { '@type': 'Offer', name: '高级版', price: '18', priceCurrency: 'CNY', description: '¥18/年' });
-  assert.deepEqual(ld.sameAs, ['https://apps.example.com/fawn']);
+  assert.deepEqual(ld.sameAs, ['https://apps.example.com/fawn'], 'media coverage is evidence, not sameAs');
 });
 
 test('pages carry JSON-LD that parses, and FAQPage lists every question', () => {
@@ -150,7 +155,7 @@ test('pages carry JSON-LD that parses, and FAQPage lists every question', () => 
   assert.match(files.find((f) => f.path === 'robots.txt').text, /Sitemap: https:\/\/x.example\/brand\/sitemap.xml/);
   assert.match(files.find((f) => f.path === 'sitemap.xml').text, /<lastmod>2026-10-18<\/lastmod>/);
   const json = JSON.parse(files.find((f) => f.path === 'facts.json').text);
-  assert.equal(json.facts.length, 10);
+  assert.equal(json.facts.length, 11);
 });
 
 test('without a base URL there is no sitemap and no canonical', () => {
@@ -206,6 +211,10 @@ test('argument errors exit 2', async () => {
   assert.equal(await main(['build', '--facts', 'nope.yaml', '--out', 'x'], quiet()), 2);
   assert.equal(await main(['build', '--facts', 'nope.yaml'], quiet()), 2);
   assert.equal(await main(['publish'], quiet()), 2);
+  const d = tmp(); writeFileSync(join(d, 'card.yaml'), CARD);
+  const q = quiet();
+  assert.equal(await main(['build', '--facts', join(d, 'card.yaml'), '--drafts', join(d, 'typo'), '--out', join(d, 'site')], q), 2, 'an explicit --drafts that does not exist is an error');
+  assert.ok(!existsSync(join(d, 'site')));
   assert.throws(() => parseArgs(['build', '--out']));
 });
 
