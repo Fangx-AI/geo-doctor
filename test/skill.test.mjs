@@ -46,7 +46,7 @@ for (const name of skills) {
   });
 }
 
-for (const script of ['geo-audit.mjs', 'geo-publish.mjs', 'geo-probe.mjs']) {
+for (const script of ['geo-audit.mjs', 'geo-publish.mjs', 'geo-probe.mjs', 'geo-site.mjs']) {
   test(`bundled ${script} matches cli/${script}`, () => {
     assert.equal(readFileSync(`skills/geo-doctor/scripts/${script}`, 'utf8'), readFileSync(`cli/${script}`, 'utf8'),
       `run: cp cli/${script} skills/geo-doctor/scripts/`);
