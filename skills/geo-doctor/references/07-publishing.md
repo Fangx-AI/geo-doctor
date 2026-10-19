@@ -59,6 +59,22 @@
 
 先加 `--dry-run` 演练一遍，确认会发哪些再正式发。发完链接自动记到 `geo/published.csv`，然后照第二步提交收录（百度搜索资源平台、Google Search Console、Bing Webmaster）。
 
+**没有官网，或官网是 JS 空壳、体检分数低：先建一个事实站。** 用 `scripts/geo-site.mjs`（或 `npx -p github:Fangx-AI/geo-doctor geo-site …`）把 `geo/fact-card.yaml` 里**已确认**的事实和已确认的文章生成一个静态站，AI 一读就懂：
+
+```bash
+geo-site build --facts geo/fact-card.yaml --drafts geo/drafts --out site --base-url https://网址/
+```
+
+它会生成事实页（index.html，带 SoftwareApplication 或 Product 结构化数据）、常见问题页（faq.html，带 FAQPage 结构化数据，问题按事实卡自动生成，例如"X 多少钱""X 和 Y 有什么区别"）、文章页、`llms.txt`、`facts.json`、`robots.txt` 和 `sitemap.xml`。只用状态为"已确认"的事实，未知和来源冲突的条目不会出现；名称（B01）和一句话说明（B03）没确认时拒绝生成。
+
+放在哪：
+
+- **GitHub Pages（免费，推荐给没有官网的用户）**：在用户的仓库里运行 `geo-site action`，它写一个工作流 `.github/workflows/geo-site.yml`；用户在 Settings → Pages 把 Source 设为 "GitHub Actions" 后，每次改动 `geo/` 都会自动重新生成、上线并体检一次。
+- **已有官网**：把 `--out` 指向官网的一个子目录（例如 `/facts/`），`--base-url` 写这个子目录的真实地址，再从官网首页和页脚链接过去。
+- 上线后用 `geo-audit` 体检事实页和常见问题页，目标是 100 分。
+
+事实站不是站群：一个产品只建一个，内容只来自事实卡和人审过的文章，不要为了"多占位置"复制多个站。
+
 **第三方平台：打包好，由用户本人发。** 知乎、公众号、头条号、百家号、搜狐号、小红书、掘金、Medium、Reddit 都不自动发：多数平台禁止机器批量发帖，自动发容易封号，也正是"GEO 投毒"的做法。
 
 ```bash

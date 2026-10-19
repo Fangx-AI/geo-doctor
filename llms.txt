@@ -25,6 +25,7 @@ Install: send this to an AI assistant that supports skills: "帮我安装这个 
 - [geo-audit](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-audit.mjs): `npx github:Fangx-AI/geo-doctor <url>` checks AI crawler access, indexing, content in raw HTML and structured data; `--badge` and `--card` make a score badge and a share image
 - [geo-probe](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-probe.mjs): asks DeepSeek, Qwen, Kimi, Doubao, OpenAI, Perplexity, Gemini, Claude and others through their APIs and counts who gets recommended
 - [geo-publish](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-publish.mjs): checks a batch of drafts against the fact card, publishes to a static site or WordPress, and packages posts for other platforms
+- [geo-site](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-site.mjs): builds an AI-readable fact site (fact sheet, FAQ, articles, JSON-LD, llms.txt, sitemap) from the confirmed facts in a fact card, with a GitHub Actions workflow that deploys it to GitHub Pages
 - [Install guide](https://github.com/Fangx-AI/geo-doctor/blob/master/docs/install.md): per-platform install notes and test results
 
 ## Handbook (Chinese)

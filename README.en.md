@@ -71,7 +71,7 @@ Like a doctor's visit, in eight steps, each with a file you keep:
 | 4 Sampling | "what does AI say about me now?" | Tells you which 10 questions to ask in your target AI; you paste the answers back. With API keys it can also ask ChatGPT, Claude, Perplexity, Gemini, DeepSeek and others automatically, archiving every answer | Answer archive and recommendation rate |
 | 5 Diagnosis | "why doesn't it recommend me?" | Computes your recommendation rate, ranks competitors, and lists each question where a competitor is recommended and you aren't, with the sites AI read | Competitor gap list and prescription |
 | 6 Batch writing | "write them all" | One article per gap question, only from the fact card; a script checks placeholders, hype, unconfirmed facts and near-duplicates | A batch of pages, FAQs, comparisons |
-| 7 Batch publishing | "publish them" | Picks platforms by target AI. Publishes to your own site automatically (static HTML, WordPress, any HTTP API); packages ready-to-paste posts for Medium, Reddit, Zhihu, WeChat and more that you publish yourself | Live site pages, platform-ready posts and a checklist |
+| 7 Batch publishing | "publish them" | Picks platforms by target AI. Publishes to your own site automatically (static HTML, WordPress, any HTTP API); no site AI can read? builds a fact site from your fact card and hosts it free on GitHub Pages; packages ready-to-paste posts for Medium, Reddit, Zhihu, WeChat and more that you publish yourself | Live site pages, a fact site, platform-ready posts and a checklist |
 | 8 Re-test | "two weeks later, did it work?" | Asks the same questions again and compares, with sample sizes; automatic sampling can run weekly to track the trend | Re-test report |
 
 Supports **software, apps, websites, mini programs and online products**. A local-business version is in progress.
@@ -79,6 +79,8 @@ Supports **software, apps, websites, mini programs and online products**. A loca
 > Step 4 can run automatically: `OPENAI_API_KEY=… npx -p github:Fangx-AI/geo-doctor geo-probe run geo/questions.csv --ai openai,perplexity --brand "Your brand" --competitors "Rival A,Rival B"` asks each question twice, archives every answer and counts who gets recommended. API answers can differ from the apps (no login, often no web search), so confirm important conclusions by asking in the app.
 >
 > Steps 6 and 7 also run from the command line: `npx -p github:Fangx-AI/geo-doctor geo-publish check geo/drafts` checks a batch, `… site … --to wordpress` publishes to your site, `… pack …` packages posts for other platforms. Run `geo-publish --help` for the full usage.
+>
+> No site AI can read? `npx -p github:Fangx-AI/geo-doctor geo-site build --facts geo/fact-card.yaml --out site --base-url https://your.site/` turns the confirmed facts in your fact card into a fact sheet, an FAQ page, `llms.txt` and structured data that score 100 in the audit; `geo-site action` adds a workflow that deploys it to GitHub Pages.
 
 <a id="faq"></a>
 
