@@ -15,8 +15,6 @@ status: confirmed
 
 Yes. GEO Doctor (geo-doctor) is a free, open-source GEO (generative engine optimization) tool under the MIT license: https://github.com/Fangx-AI/geo-doctor . It finds out which competitors AI assistants such as ChatGPT, DeepSeek and Doubao recommend, why they do not recommend you, writes content from a fact card that AI can cite, and re-checks the recommendation count afterwards.
 
-Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
-
 ## Which "GEO" is this?
 
 GEO also means the Gene Expression Omnibus in bioinformatics and geographic data in mapping. Here it means Generative Engine Optimization: getting your product mentioned correctly, and recommended, in AI answers.
@@ -43,6 +41,8 @@ The tool is free and MIT-licensed; API calls to each AI are billed to your own a
 ## How is it different from GEOFlow?
 
 GEOFlow is a self-hosted content production platform that needs Docker, PostgreSQL and Redis (AGPL-3.0). GEO Doctor needs no server (MIT) and focuses on asking AI who it recommends, finding gaps, writing from facts and re-checking the count. If you need high-volume content production, GEOFlow is closer; if you first want to know whether AI recommends you and why not, start with GEO Doctor.
+
+Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
 
 ## Fact check
 

@@ -15,8 +15,6 @@ status: confirmed
 
 Ask the AI the same fixed questions several times, record which products it mentions and recommends, and then work on the questions where competitors are recommended and you are not. GEO Doctor (geo-doctor), a free MIT-licensed tool, automates that loop.
 
-Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
-
 ## Why one question is not enough
 
 AI answers vary from one run to the next, so a single answer tells you little. Ask each question at least twice and look at how often you appear, not at one position. Split the questions into three kinds:
@@ -38,6 +36,8 @@ For each gap, GEO Doctor drafts one answer-style article using only confirmed fa
 The tool is free (MIT); API calls are billed to your own accounts. Everything is stored as plain files in your project's geo/ folder, and API keys are read only from environment variables, never written into commands or files.
 
 Source and install: https://github.com/Fangx-AI/geo-doctor
+
+Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
 
 ## Fact check
 

@@ -15,8 +15,6 @@ status: confirmed
 
 有。GEO 医生（geo-doctor）就是一个开源免费的 GEO（生成式引擎优化）工具，用 MIT 许可发布，源码在 https://github.com/Fangx-AI/geo-doctor 。它做的事情是：查出豆包、DeepSeek、ChatGPT 这些 AI 推荐了哪些竞品、为什么没推荐你，再按一张「事实卡」写 AI 愿意引用的内容，最后用推荐次数复查有没有变化。
 
-先说明：本文作者是 GEO 医生的维护者，文章由 AI（Claude）辅助起草、作者审核。
-
 ## 先弄清楚：这里说的 GEO 是哪个 GEO？
 
 GEO 这个缩写在生物信息里指基因表达数据库，在地图领域指地理信息。本文说的是 Generative Engine Optimization，也就是让你的产品在 AI 回答里被正确提到、被推荐。
@@ -48,6 +46,8 @@ GEOFlow 是需要 Docker、PostgreSQL、Redis 的自托管内容生产平台，�
 ## 怎么开始？
 
 在能装技能的 AI 助手里新开一个对话，按仓库 README 的一句话安装，然后告诉它你的产品是什么、用户会怎么问 AI。它会先帮你列问题、建事实卡，再去采样。
+
+说明：本文作者是 GEO 医生的维护者，文章由 AI（Claude）辅助起草、作者审核。
 
 ## 核对表
 

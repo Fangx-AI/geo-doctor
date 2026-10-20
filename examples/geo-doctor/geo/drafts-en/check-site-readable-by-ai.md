@@ -15,8 +15,6 @@ status: confirmed
 
 Check four things: whether robots.txt blocks AI search crawlers, whether the page carries noindex, whether the main text is visible without running JavaScript, and whether crawlers are blocked by a firewall or CDN. GEO Doctor (geo-doctor) has a free, MIT-licensed checker for these.
 
-Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
-
 ## Why AI search may not see your site
 
 AI assistants that search the web fetch pages first and answer from what they fetched. If they cannot fetch your page, or get an empty shell, they will not cite you. Four usual causes:
@@ -40,6 +38,8 @@ GEO Doctor checks robots.txt, AI crawlers, noindex and whether the main text is 
 Being readable is only step one: AI also needs clear, consistent content about you to cite.
 
 Source: https://github.com/Fangx-AI/geo-doctor
+
+Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
 
 ## Fact check
 

@@ -15,8 +15,6 @@ status: confirmed
 
 GEO (generative engine optimization) tools fall into three groups: **monitoring who AI recommends**, **producing content at volume**, and **checking whether AI can read your site**. Decide which part you are missing before picking a tool. The free, open-source GEO Doctor (geo-doctor) covers monitoring, gap finding, fact-based drafting and readability checks, and deliberately does not do volume content production.
 
-Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me. For other products I only state what can be checked; see their own sites for details.
-
 ## Monitoring
 
 These tools ask AI the same questions repeatedly and count how often you and your competitors are mentioned and recommended. When we asked DeepSeek GEO-tool questions, the products it recommended most were Profound, Otterly and Peec AI; check their sites for features and pricing.
@@ -38,6 +36,8 @@ If AI search cannot fetch your pages, nothing else matters. GEO Doctor checks ro
 GEO Doctor runs a loop: ask the AIs, find questions where a competitor is recommended and you are not (per AI), draft from the fact card, publish a fact site AI can read, and re-check the count every week with a report and a pull request to review. It does not promise rankings, inflate numbers or write fake reviews.
 
 Free and MIT-licensed; API calls go on your own account. Source: https://github.com/Fangx-AI/geo-doctor
+
+Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me. For other products I only state what can be checked; see their own sites for details.
 
 ## Fact check
 
