@@ -42,7 +42,7 @@
 
 ## 自动采样：用 API 批量问（可选）
 
-用户有某个 AI 的 API Key、想省掉手动提问，或想每周看一次趋势时，用 `scripts/geo-probe.mjs`（零依赖 Node.js 脚本）自动提问。它**补充**人工采样，不替代：API 回答不登录、多数不联网、系统提示也不同，和用户在 App 里看到的可能不一样。
+用户有某个 AI 的 API Key、想省掉手动提问，或想每周看一次趋势时，用 `scripts/geo-probe.mjs`（零依赖 Node.js 脚本）自动提问。它**补充**人工采样，不替代：API 回答不登录、系统提示也不同，和用户在 App 里看到的可能不一样。联网方面：Perplexity、Kimi（内置 `$web_search`，每次搜索另计少量费用）和通义千问（`enable_search`）会联网搜索，其他接口多数不联网。
 
 1. 先确认 `geo/questions.csv` 里的题已经填好（模板占位题会被跳过），并问清用户的品牌别名和主要竞品。
 2. 请用户在**自己的终端**设置 API Key 环境变量（如 `DEEPSEEK_API_KEY`、`DASHSCOPE_API_KEY`、`MOONSHOT_API_KEY`、`ARK_API_KEY`、`OPENAI_API_KEY`、`PERPLEXITY_API_KEY`、`GEMINI_API_KEY`、`ANTHROPIC_API_KEY`）。**不要让用户把 Key 发到对话里，也不要写进任何文件。**

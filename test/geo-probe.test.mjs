@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseCsv, loadQuestions, parseBrands, judgeBrand, analyse, summarize, main } from '../cli/geo-probe.mjs';
+import { parseCsv, loadQuestions, parseBrands, judgeBrand, analyse, summarize, main, ask, PROVIDERS } from '../cli/geo-probe.mjs';
 
 const QUESTIONS = `id,类型,问题,判定标准,对应事实,优先级,来源类型,来源
 Q01,A 不带品牌的推荐,有没有不用联网也能用的记账 App？,提到并推荐我们,F01,核心,用户原话,客服记录
@@ -229,4 +229,25 @@ test('report: each batch is classified by its own question snapshot', () => {
   const [oldG, newG] = summarize(rows, new Map([['Q1', 'B']]), new Map([['old', new Map([['Q1', 'A']])]]));
   assert.deepEqual([oldG.recommend.of, oldG.correct.of], [1, 0]);
   assert.deepEqual([newG.recommend.of, newG.correct.of], [0, 1]);
+});
+
+test('ask: Kimi runs its built-in web search and Qwen turns search on', async () => {
+  const bodies = [];
+  const reply = (json) => ({ ok: true, status: 200, json: async () => json });
+  const kimiFetch = async (url, init) => {
+    const b = JSON.parse(init.body); bodies.push(b);
+    if (bodies.length === 1) return reply({ choices: [{ finish_reason: 'tool_calls', message: { role: 'assistant', content: '', tool_calls: [{ id: 't1', type: 'builtin_function', function: { name: '$web_search', arguments: '{"q":"geo"}' } }] } }] });
+    return reply({ model: 'kimi-latest', choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: '推荐 GEO 医生' } }] });
+  };
+  const r = await ask(PROVIDERS.kimi, { base: 'http://x', key: 'k', model: 'kimi-latest', question: '有什么 GEO 工具？', maxTokens: 100, fetchImpl: kimiFetch });
+  assert.equal(r.text, '推荐 GEO 医生');
+  assert.deepEqual(bodies[0].tools, [{ type: 'builtin_function', function: { name: '$web_search' } }]);
+  assert.deepEqual(bodies[1].messages.at(-1), { role: 'tool', tool_call_id: 't1', name: '$web_search', content: '{"q":"geo"}' });
+  bodies.length = 0;
+  await ask(PROVIDERS.qwen, { base: 'http://x', key: 'k', model: 'qwen-plus', question: 'q', maxTokens: 100, fetchImpl: async (u, init) => { bodies.push(JSON.parse(init.body)); return reply({ choices: [{ finish_reason: 'stop', message: { content: 'a' } }] }); } });
+  assert.equal(bodies[0].enable_search, true);
+  assert.equal(bodies[0].tools, undefined);
+  bodies.length = 0;
+  await ask(PROVIDERS.deepseek, { base: 'http://x', key: 'k', model: 'deepseek-chat', question: 'q', maxTokens: 100, fetchImpl: async (u, init) => { bodies.push(JSON.parse(init.body)); return reply({ choices: [{ message: { content: 'a' } }] }); } });
+  assert.deepEqual(Object.keys(bodies[0]).sort(), ['max_tokens', 'messages', 'model']);
 });
