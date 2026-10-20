@@ -94,7 +94,7 @@
 
 > 第 4 步可以用命令行自动问：`DEEPSEEK_API_KEY=… npx -p github:Fangx-AI/geo-doctor geo-probe run geo/questions.csv --ai deepseek,qwen --brand "你的品牌" --competitors "竞品甲,竞品乙"`，每题问 2 次，存下全部原文，算出推荐率和竞品推荐榜。用法见 [第 4 步说明](skills/geo-doctor/references/04-sampling.md#自动采样用-api-批量问可选)。
 >
-> 第 6、7 步也可以单独用命令行跑：`npx -p github:Fangx-AI/geo-doctor geo-publish check geo/drafts` 检查一批草稿，`… site … --to wordpress` 发到官网，`… pack …` 打包第三方平台稿件，`… post … --to devto` 用官方接口自动发到 dev.to；生成事实站时还会附带一个浏览器填稿助手，在你自己的浏览器里把文章填进知乎、掘金编辑器，你检查后点发布。完整用法见 [第 7 步说明](skills/geo-doctor/references/07-publishing.md#第三步批量发布自己的官网自动发第三方平台由人发)。
+> 第 6、7 步也可以单独用命令行跑：`npx -p github:Fangx-AI/geo-doctor geo-publish check geo/drafts` 检查一批草稿，`… site … --to wordpress` 发到官网，`… pack …` 打包第三方平台稿件，`… post … --to devto` 用官方接口自动发到 dev.to；生成事实站时还会附带一个分发台页面和浏览器填稿助手：在一个页面里看每篇文章在各平台的状态，点一下就打开知乎、掘金编辑器并填好，你检查后点发布，链接自动记回分发台。完整用法见 [第 7 步说明](skills/geo-doctor/references/07-publishing.md#第三步批量发布自己的官网自动发第三方平台由人发)。
 >
 > 没有能被 AI 读懂的官网？`npx -p github:Fangx-AI/geo-doctor geo-site build --facts geo/fact-card.yaml --out site --base-url https://你的网址/` 用事实卡里已确认的事实生成事实页、常见问题页、`llms.txt` 和结构化数据，体检 100 分；`geo-site action` 再写一个工作流，自动发布到 GitHub Pages。
 >

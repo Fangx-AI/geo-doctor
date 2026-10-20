@@ -472,6 +472,8 @@ test('fill helper: items for Zhihu (HTML) and Juejin (Markdown), and a userscrip
   assert.match(js, /^\/\/ ==UserScript==/);
   assert.match(js, /@match\s+https:\/\/zhuanlan\.zhihu\.com\/write\*/);
   assert.match(js, /@connect\s+x\.example/);
+  assert.match(js, /@match\s+https:\/\/x\.example\/brand\/distribute\.html\*/);
+  assert.match(js, /"board":"https:\/\/x\.example\/brand\/distribute\.html"/);
   assert.match(js, /@updateURL\s+https:\/\/x\.example\/brand\/geo-fill\.user\.js/);
   assert.match(js, /"manifest":"https:\/\/x\.example\/brand\/fill\.json"/);
   // It fills fields and stops: nothing that submits, publishes or touches login state.

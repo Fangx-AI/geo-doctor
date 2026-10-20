@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
-import { parseFactCard, loadFacts, siteModel, faqItems, structuredData, buildSite, llmsTxt, workflowYaml, parseArgs, main } from '../cli/geo-site.mjs';
+import { parseFactCard, loadFacts, siteModel, faqItems, structuredData, buildSite, llmsTxt, workflowYaml, parseArgs, main, distributeHtml } from '../cli/geo-site.mjs';
 import { audit } from '../cli/geo-audit.mjs';
 
 const CARD = `# 事实卡
@@ -263,6 +263,18 @@ test('build: drafts for Zhihu or Juejin also get fill.json and the browser fill 
   assert.deepEqual(fill.items.map((i) => i.key), ['zhihu/offline', 'juejin/offline']);
   assert.match(fill.items[1].body, /https:\/\/x\.example\/b\/articles\/offline\.html/);
   assert.match(readFileSync(join(out, 'geo-fill.user.js'), 'utf8'), /"manifest":"https:\/\/x\.example\/b\/fill\.json"/);
+  const board = readFileSync(join(out, 'distribute.html'), 'utf8');
+  assert.match(board, /<meta name="robots" content="noindex, nofollow">/);
+  assert.match(board, /href="https:\/\/zhuanlan\.zhihu\.com\/write#geo-fill=zhihu%2Foffline"/);
+  assert.match(board, /data-st="juejin\/offline"/);
+  assert.match(board, /href="https:\/\/x\.example\/b\/articles\/offline\.html">已发/);
+  assert.ok(!readFileSync(join(out, 'sitemap.xml'), 'utf8').includes('distribute'), 'the board stays out of the sitemap');
+  const facts = loadFacts(parseFactCard(CARD));
+  const en = distributeHtml(facts, [], [{ key: 'zhihu/x', platform: 'zhihu' }], { baseUrl: 'https://x.example/', lang: 'en' });
+  assert.match(en, /<html lang="en">/);
+  assert.match(en, /Distribution board/);
+  assert.doesNotMatch(en, /分发台|待发/);
   assert.equal(await main(['build', '--facts', join(d, 'geo', 'fact-card.yaml'), '--drafts', join(d, 'geo', 'drafts'), '--out', out], quiet()), 0);
   assert.ok(!existsSync(join(out, 'geo-fill.user.js')), 'no helper without a base URL to read the list from');
+  assert.ok(!existsSync(join(out, 'distribute.html')));
 });
