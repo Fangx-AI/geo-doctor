@@ -403,7 +403,7 @@ export function similarity(a, b) {
 
 // A claim that is denied ("不保证排名", "no guarantee") is the honest wording, not hype.
 // 被否定的说法（「不保证排名」）正是如实的写法，不算夸大。
-const NEGATED = { zh: /(?:不(?![仅但断少错停])|没有|无法|并非|绝不|从不|未(?!来))[^，。；！？\n]{0,2}$/, en: /\b(?:not|no|never|without|n't)\s+(?:\w+\s+)?$/i };
+const NEGATED = { zh: /(?:不(?![仅但断少错停])|没有|无法|并非|绝不|从不|未(?!来))[^，。；！？\n]{0,2}$/, en: /(?:\bnot(?!\s+(?:only|just|merely)\b)|\bno|\bnever|\bwithout|n't)\s+(?:\w+\s+)?$/i };
 
 function hypeHits(text, lang) {
   const hits = [];

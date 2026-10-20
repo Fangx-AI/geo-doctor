@@ -156,15 +156,15 @@ test('check: hype words, made-up reviews, short bodies and near duplicates are w
 
 test('check: a denied claim ("不保证", "no guarantee") is not hype', () => {
   const geo = setup({
-    'n.md': draft({ title: 'N', slug: 'n', question: 'q', status: 'draft', lang: 'en' }, '它不保证 AI 排名，也无法保证结果。We do not guarantee rankings and offer no guarantee.'),
-    'y.md': draft({ title: 'Y', slug: 'y', question: 'q', status: 'draft', lang: 'en' }, '不少用户首选它，我们保证效果。Results guaranteed.'),
+    'n.md': draft({ title: 'N', slug: 'n', question: 'q', status: 'draft', lang: 'en' }, '它不保证 AI 排名，也无法保证结果。We do not guarantee rankings, it doesn\'t guarantee clicks and offer no guarantee.'),
+    'y.md': draft({ title: 'Y', slug: 'y', question: 'q', status: 'draft', lang: 'en' }, '不少用户首选它，我们保证效果。Results guaranteed. Not only the best, not just world-class.'),
   });
   cleanup.push(join(geo, '..'));
   const issues = checkDrafts(loadDrafts(join(geo, 'drafts')), { lang: 'zh' });
   const hype = (f) => issues.filter((x) => x.file === f && x.code === 'hype').map((x) => x.msg);
   assert.deepEqual(hype('n.md'), []);
   const y = hype('y.md').join(' ');
-  for (const w of ['首选', '保证', 'guaranteed']) assert.ok(y.includes(w), w);
+  for (const w of ['首选', '保证', 'guaranteed', 'the best', 'world-class']) assert.ok(y.includes(w), w);
 });
 
 test('CLI check exits 1 on errors and 0 when clean', async () => {
