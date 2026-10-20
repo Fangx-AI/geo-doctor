@@ -148,6 +148,8 @@ test('studio: page, state, the weekly loop, review and fact confirmation end to 
   assert.equal((await call('/api/fact/P02', { method: 'POST', body: { confirmed: true } })).status, 200);
   assert.equal((await call('/api/draft/offline-budget-app.md/status', { method: 'POST', body: { status: 'confirmed' } })).status, 200);
   assert.equal((await call('/api/fact/Z99', { method: 'POST', body: { confirmed: true } })).status, 404);
+  writeFileSync(join(d, 'geo', 'fact-card.yaml'), readFileSync(join(d, 'geo', 'fact-card.yaml'), 'utf8') + '公开证据:\n  - 编号: E01\n    类型: ""\n    地址: ""\n    状态: 未知\n');
+  assert.equal((await call('/api/fact/E01', { method: 'POST', body: { confirmed: true } })).status, 422, 'an empty entry cannot be confirmed');
 
   const site = await call('/api/run', { method: 'POST', body: { cmd: 'site' } });
   assert.equal(site.data.code, 0, site.data.err);
@@ -224,4 +226,42 @@ test('CLI: listening beyond this machine needs a long GEO_STUDIO_TOKEN', async (
   assert.equal(await main(['--port', 'abc', '--lang', 'zh'], { env: {}, err: () => {}, out: () => {}, listen: false }), 2);
   assert.equal(await main(['--help', '--lang', 'en'], { env: {}, err: () => {}, out: (s) => out.push(s), listen: false }), 0);
   assert.match(out.join('\n'), /GEO Doctor Studio/);
+});
+
+test('studio: material in, facts extracted with quotes, written to the card as pending', async () => {
+  const d = project();
+  const reply = JSON.stringify([
+    { id: 'NEW', section: '价格', fields: { 名称: '团队版', 价格: '¥60/年' }, quote: '团队版每年 60 元' },
+    { id: 'NEW', section: '核心能力', fields: { 能力: '云同步' }, quote: '支持云同步' },
+  ]);
+  const fetchImpl = async (url, init) => {
+    if (String(url).startsWith('https://site.example')) return { ok: true, status: 200, headers: { get: () => 'text/html' }, text: async () => '<body><p>团队版每年 60 元，最多 5 人。</p></body>' };
+    const body = JSON.parse(init.body);
+    return { ok: true, status: 200, json: async () => ({ model: body.model, choices: [{ message: { content: reply }, finish_reason: 'stop' }] }) };
+  };
+  const { call } = await start(d, { fetchImpl });
+  const fetched = await call('/api/source', { method: 'POST', body: { url: 'https://site.example/pricing' } });
+  assert.equal(fetched.status, 200);
+  assert.equal(fetched.data.file, 'site-example-pricing.txt');
+  assert.match(readFileSync(join(d, 'geo', 'sources', 'site-example-pricing.txt'), 'utf8'), /^来源: https:\/\/site\.example\/pricing\n团队版每年 60 元/);
+  assert.equal((await call('/api/source', { method: 'POST', body: { name: '说明.md', text: '小鹿记账的说明' } })).data.file, '说明.md');
+  assert.equal((await call('/api/source', { method: 'POST', body: { name: '说明.md', text: '第二份' } })).data.file, '说明-2.md');
+  assert.equal((await call('/api/source', { method: 'POST', body: {} })).status, 400);
+  let s = (await call('/api/state')).data;
+  assert.deepEqual(s.sources.map((x) => [x.file, x.from]), [['site-example-pricing.txt', 'https://site.example/pricing'], ['说明-2.md', ''], ['说明.md', '']]);
+  assert.equal((await call('/api/source/%E8%AF%B4%E6%98%8E-2.md', { method: 'DELETE', body: {} })).status, 200);
+  assert.equal((await call('/api/source/..%2Fx.md', { method: 'DELETE', body: {} })).status, 400);
+
+  const r = await call('/api/run', { method: 'POST', body: { cmd: 'facts' } });
+  assert.equal(r.data.code, 0, r.data.err);
+  s = (await call('/api/state')).data;
+  const cands = s.candidates.filter((c) => c.status === 'new');
+  assert.equal(cands.length, 1, 'the invented quote was dropped');
+  assert.deepEqual([cands[0].section, cands[0].source], ['价格', 'https://site.example/pricing']);
+  assert.equal((await call(`/api/candidate/${cands[0].cid}`, { method: 'POST', body: { action: 'apply' } })).status, 200);
+  s = (await call('/api/state')).data;
+  const added = s.facts.entries.find((e) => e.label === '团队版');
+  assert.deepEqual([added.id, added.confirmed, added.status], ['P04', false, '待确认']);
+  assert.equal((await call('/api/candidate/c99', { method: 'POST', body: { action: 'apply' } })).status, 404);
+  assert.equal((await call('/api/candidate/c1', { method: 'POST', body: { action: 'delete' } })).status, 400);
 });
