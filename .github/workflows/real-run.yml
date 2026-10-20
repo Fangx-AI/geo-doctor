@@ -45,6 +45,7 @@ jobs:
           if [ -z "$VAR" ]; then echo "Unknown AI: $AI" | tee -a "$S"; exit 1; fi
           if [ -z "${!VAR:-}" ]; then
             printf '## 缺少 API Key / Missing API key\n\n请在仓库 Settings → Secrets and variables → Actions 里添加 `%s`，再重新运行。\n\nAdd the `%s` repository secret and run again.\n' "$VAR" "$VAR" >> "$S"
+            echo "::error title=Missing API key::Add the $VAR repository secret and run again."
             exit 1
           fi
           cp -r examples/geo-doctor work
@@ -61,6 +62,11 @@ jobs:
             echo "$out"
             echo "::endgroup::"
             printf '### %s · exit %s\n\n```\n%s\n```\n\n' "$title" "$code" "$(echo "$out" | head -c 20000)" >> "$S"
+            # Failed steps also become annotations, readable through the API without the log.
+            if [ "$code" != 0 ]; then
+              local msg; msg=$(echo "$out" | tail -c 3000); msg=${msg//'%'/'%25'}; msg=${msg//$'\r'/'%0D'}; msg=${msg//$'\n'/'%0A'}
+              echo "::error title=$title (exit $code)::$msg"
+            fi
             return $code
           }
           printf '# GEO 医生真实全流程 · %s · %s\n\n> 真实 API 调用，原样输出，没有修饰。API 回答不登录、多数不联网，和 App 里可能不同。\n\n' "$AI" "$(date -u +%Y-%m-%d)" >> "$S"
