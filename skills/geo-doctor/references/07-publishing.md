@@ -75,7 +75,16 @@ geo-site build --facts geo/fact-card.yaml --drafts geo/drafts --out site --base-
 
 事实站不是站群：一个产品只建一个，内容只来自事实卡和人审过的文章，不要为了"多占位置"复制多个站。
 
-**第三方平台：打包好，由用户本人发。** 知乎、公众号、头条号、百家号、搜狐号、小红书、掘金、Medium、Reddit 都不自动发：多数平台禁止机器批量发帖，自动发容易封号，也正是"GEO 投毒"的做法。
+**有官方发布接口的平台：用用户自己的 Key 自动发。** 目前支持 dev.to（海外开发者社区，ChatGPT、Perplexity 常引用）。草稿的 `platforms` 里写上 `devto`，Key 放在环境变量 `DEVTO_API_KEY`（在 https://dev.to/settings/extensions 生成）：
+
+```bash
+geo-publish post geo/drafts --to devto --dry-run        # 先演练
+geo-publish post geo/drafts --to devto --status publish # 默认 draft，只存成 dev.to 草稿
+```
+
+只发已确认、写了 `devto` 的草稿；dev.to 上已有同标题文章就更新，不会重复发，已发布的不会被改回草稿。结尾的核对表不会发出去。放在 GitHub 上时可以写一个工作流：文章合并进默认分支后自动运行这条命令。
+
+**没有官方接口的平台：打包好，由用户本人发。** 知乎、公众号、头条号、百家号、搜狐号、小红书、掘金、Medium、Reddit 都不自动发：这些平台没有给个人开放的发布接口，自动化只能模拟登录，违反平台规则，容易封号，也正是"GEO 投毒"的做法。
 
 ```bash
 geo-publish pack geo/drafts --brand 品牌名

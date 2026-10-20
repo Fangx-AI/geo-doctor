@@ -31,7 +31,12 @@ export const PLATFORMS = {
   medium: { ext: 'md', editor: 'https://medium.com/new-story' },
   reddit: { ext: 'md', editor: 'https://www.reddit.com/submit' },
 };
-const KNOWN = new Set([SITE, ...Object.keys(PLATFORMS)]);
+// Platforms with an official publishing API: posted automatically with your own key, never by simulating a login.
+// 有官方发布接口的平台：用你自己的 Key 自动发布，绝不模拟登录。
+export const AUTO = {
+  devto: { keyEnv: 'DEVTO_API_KEY', api: 'https://dev.to/api', keyPage: 'https://dev.to/settings/extensions' },
+};
+const KNOWN = new Set([SITE, ...Object.keys(PLATFORMS), ...Object.keys(AUTO)]);
 
 // Wording that needs proof or breaks advertising rules. Warnings, not errors: context matters.
 // 需要证据或可能违反广告法的说法。只提醒不拦截，因为要看上下文。
@@ -58,6 +63,7 @@ const M = {
   geo-publish site  <草稿目录> --to wordpress --site 网址 --user 用户名 [--status draft|publish]
   geo-publish site  <草稿目录> --to http --endpoint 网址 [--token-env 变量名] [--header "名: 值"]
   geo-publish pack  <草稿目录> [--out 目录] [--platforms zhihu,wechat,...] [--brand 品牌名]
+  geo-publish post  <草稿目录> --to devto [--status draft|publish]
   geo-publish log   --slug 文章 --platform 平台 --url 链接
 
 选项：
@@ -68,7 +74,9 @@ const M = {
   --lang zh|en        输出语言（默认跟随系统）
 
 WordPress 用"应用密码"登录，密码从环境变量 GEO_WP_APP_PASSWORD 读取，不要写在命令里。
-只有 status: confirmed 的草稿会被发布或打包。第三方平台只打包，由你本人粘贴、检查、点发布。`,
+只有 status: confirmed 的草稿会被发布或打包。
+post 只发 platforms 里写了该平台的草稿，走平台官方接口，Key 从环境变量读取（dev.to：DEVTO_API_KEY）；
+同标题的文章已存在就更新，不会重复发。没有官方接口的平台（知乎、公众号等）只打包，由你本人粘贴、检查、点发布。`,
     noDir: (d) => `找不到草稿目录：${d}`,
     noDrafts: (d) => `${d} 里没有 .md 草稿`,
     unknownCmd: (c) => `不认识的命令：${c}`,
@@ -78,6 +86,10 @@ WordPress 用"应用密码"登录，密码从环境变量 GEO_WP_APP_PASSWORD �
     noPass: '请先设置环境变量 GEO_WP_APP_PASSWORD（WordPress 后台 → 用户 → 应用密码）',
     noToken: (v) => `环境变量 ${v} 没有值`,
     badHeader: (h) => `--header 格式应为 "名: 值"：${h}`,
+    badAuto: (l) => `post --to 只能是：${l}`,
+    noKey: (v, page) => `请先设置环境变量 ${v}（在 ${page} 生成），不要写在命令或文件里`,
+    posted: (s, u, st) => `✅ ${s} → ${u}（${st === 'publish' ? '已发布' : '草稿'}）`,
+    repost: (s, u, st) => `🔁 ${s} 已存在，已更新 → ${u}（${st === 'publish' ? '已发布' : '草稿'}）`,
     blocked: (n) => `有 ${n} 个错误，先修好再发布。运行 geo-publish check 查看详情。`,
     nothing: '没有可发布的草稿：只有 status: confirmed 且 platforms 里包含对应平台的草稿才会处理。',
     skipped: (n) => `跳过 ${n} 篇未确认的草稿`,
@@ -143,6 +155,7 @@ Usage:
   geo-publish site  <drafts-dir> --to wordpress --site URL --user NAME [--status draft|publish]
   geo-publish site  <drafts-dir> --to http --endpoint URL [--token-env VAR] [--header "Name: value"]
   geo-publish pack  <drafts-dir> [--out dir] [--platforms zhihu,medium,...] [--brand NAME]
+  geo-publish post  <drafts-dir> --to devto [--status draft|publish]
   geo-publish log   --slug SLUG --platform PLATFORM --url URL
 
 Options:
@@ -153,7 +166,10 @@ Options:
   --lang zh|en        output language (default: system locale)
 
 WordPress uses an application password read from the GEO_WP_APP_PASSWORD environment variable, never from the command line.
-Only drafts with status: confirmed are published or packaged. Third-party platforms are only packaged: you paste, review and publish.`,
+Only drafts with status: confirmed are published or packaged.
+post sends drafts that list that platform, through its official API, with the key from an environment variable
+(dev.to: DEVTO_API_KEY); an article with the same title is updated, never posted twice. Platforms without an
+official API (Zhihu, WeChat and others) are only packaged: you paste, review and publish.`,
     noDir: (d) => `Drafts folder not found: ${d}`,
     noDrafts: (d) => `No .md drafts in ${d}`,
     unknownCmd: (c) => `Unknown command: ${c}`,
@@ -163,6 +179,10 @@ Only drafts with status: confirmed are published or packaged. Third-party platfo
     noPass: 'Set GEO_WP_APP_PASSWORD first (WordPress admin → Users → Application Passwords)',
     noToken: (v) => `Environment variable ${v} is empty`,
     badHeader: (h) => `--header must look like "Name: value": ${h}`,
+    badAuto: (l) => `post --to must be one of: ${l}`,
+    noKey: (v, page) => `Set the ${v} environment variable first (create it at ${page}); never put it in a command or file`,
+    posted: (s, u, st) => `✅ ${s} → ${u} (${st === 'publish' ? 'published' : 'draft'})`,
+    repost: (s, u, st) => `🔁 ${s} already there, updated → ${u} (${st === 'publish' ? 'published' : 'draft'})`,
     blocked: (n) => `${n} error(s). Fix them before publishing; run geo-publish check for details.`,
     nothing: 'Nothing to publish: only drafts with status: confirmed whose platforms include the target are used.',
     skipped: (n) => `Skipped ${n} unconfirmed draft(s)`,
@@ -539,7 +559,7 @@ async function request(method, url, { headers = {}, body } = {}) {
   });
   const text = await res.text(); let json = null;
   try { json = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
-  return { status: res.status, ok: res.ok, json, text };
+  return { status: res.status, ok: res.ok, json, text, retryAfter: Number(res.headers.get('retry-after')) || 0 };
 }
 
 const failMsg = (r) => (r.json && (r.json.message || r.json.error)) || r.text.slice(0, 200).trim();
@@ -569,6 +589,47 @@ async function toHttp(d, o, t, log) {
   if (!r.ok) throw new Error(t.httpFail(r.status, failMsg(r)));
   const url = r.json?.url || r.json?.link || ''; const st = r.json?.status || 'sent';
   log(t.sent(d.slug, url || o.endpoint, st));
+  return { url, status: st };
+}
+
+// dev.to tags: at most 4, lowercase letters and digits only.
+export const devtoTags = (tags) => [...new Set(tags.map((x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '')).filter(Boolean))].slice(0, 4);
+
+// The user's own articles on dev.to, read once per run so each draft can find its earlier copy by title.
+export async function devtoArticles(key, t, req = request) {
+  const all = [];
+  for (let page = 1; page <= 10; page++) {
+    const r = await req('GET', `${AUTO.devto.api}/articles/me/all?per_page=100&page=${page}`, { headers: { 'api-key': key } });
+    if (!r.ok) throw new Error(t.httpFail(r.status, failMsg(r)));
+    const list = Array.isArray(r.json) ? r.json : [];
+    all.push(...list);
+    if (list.length < 100) break;
+  }
+  return all;
+}
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Creates or updates one article. dev.to allows about 10 writes per 30 seconds: on HTTP 429 it waits as long as
+// the server asks (Retry-After, else 30 s) and tries again, up to 3 times.
+export async function toDevto(d, o, t, log, req = request, sleep = wait) {
+  const headers = { 'api-key': o.key };
+  const article = { title: d.title, body_markdown: publicBody(d).trim() + '\n', published: o.status === 'publish', tags: devtoTags(d.tags), description: d.meta.description || '' };
+  if (o.dryRun) { log(t.dry(`POST ${AUTO.devto.api}/articles · ${d.slug} · ${o.status}`)); return null; }
+  const mine = o.existing || await devtoArticles(o.key, t, req);
+  const existing = mine.find((a) => a.title === d.title) || null;
+  // Never turn a published article back into a draft.
+  if (existing && existing.published) article.published = true;
+  let r;
+  for (let attempt = 0; ; attempt++) {
+    r = await req(existing ? 'PUT' : 'POST', existing ? `${AUTO.devto.api}/articles/${existing.id}` : `${AUTO.devto.api}/articles`, { headers, body: { article } });
+    if (r.status !== 429 || attempt >= 3) break;
+    await sleep((r.retryAfter || 30) * 1000);
+  }
+  if (!r.ok) throw new Error(t.httpFail(r.status, failMsg(r)));
+  if (!existing && r.json) mine.push(r.json);
+  const url = r.json?.url || ''; const st = r.json?.published ? 'publish' : 'draft';
+  log(existing ? t.repost(d.slug, url, st) : t.posted(d.slug, url, st));
   return { url, status: st };
 }
 
@@ -694,7 +755,7 @@ export async function main(argv, { env = process.env, out = console.log, err = c
   const t = M[lang];
   if (o.version) { out(VERSION); return 0; }
   if (o.help || !o.cmd || o.unknown) { out(t.usage); return o.help ? 0 : 2; }
-  if (!['check', 'site', 'pack', 'log'].includes(o.cmd)) { err(t.unknownCmd(o.cmd)); out(t.usage); return 2; }
+  if (!['check', 'site', 'pack', 'post', 'log'].includes(o.cmd)) { err(t.unknownCmd(o.cmd)); out(t.usage); return 2; }
 
   if (o.cmd === 'log') {
     for (const f of ['slug', 'platform', 'url']) if (!o[f]) { err(t.need('--' + f)); return 2; }
@@ -722,8 +783,9 @@ export async function main(argv, { env = process.env, out = console.log, err = c
   }
 
   // site and pack use confirmed drafts only, and refuse to run while any of them has errors.
-  const target = o.cmd === 'site' ? SITE : null;
-  const picked = drafts.filter((d) => d.confirmed && (target ? d.platforms.includes(SITE) : d.platforms.some((p) => p !== SITE)));
+  if (o.cmd === 'post' && !AUTO[o.to]) { err(t.badAuto(Object.keys(AUTO).join(', '))); return 2; }
+  const target = o.cmd === 'site' ? SITE : o.cmd === 'post' ? o.to : null;
+  const picked = drafts.filter((d) => d.confirmed && (target ? d.platforms.includes(target) : d.platforms.some((p) => PLATFORMS[p])));
   const skipped = drafts.filter((d) => !d.confirmed).length;
   const errors = issues.filter((x) => x.level === 'error' && picked.some((d) => d.file === x.file));
   if (errors.length) { err(formatIssues(drafts, issues, lang)); err('\n' + t.blocked(errors.length)); return 1; }
@@ -741,6 +803,25 @@ export async function main(argv, { env = process.env, out = console.log, err = c
     for (const w of warnings) err(`⚠️  ${w}`);
     if (!o.dryRun) out(t.packed(count, outDir));
     return 0;
+  }
+
+  if (o.cmd === 'post') {
+    const status = o.status || 'draft';
+    if (!['draft', 'publish'].includes(status)) { err(t.badStatus); return 2; }
+    const a = AUTO[o.to]; const key = env[a.keyEnv];
+    if (!key && !o.dryRun) { err(t.noKey(a.keyEnv, a.keyPage)); return 2; }
+    let failed = 0; let existing = null;
+    if (!o.dryRun) {
+      try { existing = await devtoArticles(key, t); } catch (e) { err(`❌ ${e.message}`); return 1; }
+    }
+    for (const d of picked) {
+      try {
+        const r = await toDevto(d, { key, status, dryRun: o.dryRun, existing }, t, out);
+        if (r) appendLog(logFile, { slug: d.slug, platform: o.to, url: r.url, status: r.status, title: d.title });
+      } catch (e) { failed++; err(`❌ ${d.slug}: ${e.message}`); }
+    }
+    if (!o.dryRun && picked.length > failed) out(t.logged(logFile));
+    return failed ? 1 : 0;
   }
 
   // site

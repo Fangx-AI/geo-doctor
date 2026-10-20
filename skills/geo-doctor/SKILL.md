@@ -3,7 +3,7 @@ name: geo-doctor
 description: GEO 医生：中英双语 GEO（生成式引擎优化）全流程助手。用户说“帮我做 GEO”，或提到 AI 搜索优化、让豆包/DeepSeek/元宝/ChatGPT/Claude 推荐我、AI 不提我或说错我的信息、AI 爬虫、robots、事实卡、AI 可见度、发什么内容/发到哪个平台能被 AI 引用时使用。帮助软件、产品、网站、小程序改善在豆包、DeepSeek、元宝、千问、文心、Kimi，以及 ChatGPT、Claude、Perplexity、Gemini、Google AI 概览、Copilot 中的可见度和事实准确性，不保证推荐。流程：问诊 → 体检 → 事实卡 → 问题集 → 采样（可用 API 自动问）→ 诊断 → 批量写内容 → 发布（官网自动发，第三方平台打包由人发）→ 复查。GEO doctor (generative engine optimization): use when the user says "help me with GEO", asks how to get recommended or cited by ChatGPT, Claude, Perplexity, Gemini, Google AI Overviews or Copilot, or says AI ignores or misdescribes their product.
 license: MIT
 metadata:
-  version: "0.8.1"
+  version: "0.9.0"
   homepage: https://github.com/Fangx-AI/geo-doctor
 ---
 

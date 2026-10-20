@@ -1,0 +1,38 @@
+name: devto
+# Posts GEO Doctor's own confirmed English articles to dev.to through its official API whenever they change on
+# the default branch. Needs the DEVTO_API_KEY repository secret (https://dev.to/settings/extensions); without it
+# the run only says what to add. Articles with the same title are updated, never posted twice.
+# 默认分支上的英文文章有改动时，用 dev.to 官方接口自动发布；需要仓库 Secret DEVTO_API_KEY。同标题只更新，不重复发。
+on:
+  push:
+    branches: [master]
+    paths: ['examples/geo-doctor/geo/drafts-en/**', '.github/workflows/devto.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: devto
+  cancel-in-progress: false
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    env:
+      DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Post to dev.to
+        run: |
+          if [ -z "$DEVTO_API_KEY" ]; then
+            echo "::notice title=dev.to not set up::Add the DEVTO_API_KEY repository secret to publish automatically."
+            printf '## dev.to 还没接上\n\n在仓库 Settings → Secrets and variables → Actions 添加 `DEVTO_API_KEY`（在 https://dev.to/settings/extensions 生成）后重新运行。\n' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node cli/geo-publish.mjs post examples/geo-doctor/geo/drafts-en --to devto --status publish --lang zh 2>&1 | tee out.txt
+          code=${PIPESTATUS[0]}
+          { echo '## dev.to 发布结果'; echo; echo '```'; cat out.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          msg=$(tail -c 3000 out.txt); msg=${msg//'%'/'%25'}; msg=${msg//$'\n'/'%0A'}
+          if [ "$code" != 0 ]; then echo "::error title=dev.to::$msg"; else echo "::notice title=dev.to::$msg"; fi
+          exit $code

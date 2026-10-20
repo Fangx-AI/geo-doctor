@@ -15,7 +15,7 @@ status: confirmed
 
 小团队没有服务器也能做 GEO（生成式引擎优化）：用 AI 助手或命令行在自己电脑上跑，事实站放到免费的 GitHub Pages，每周复查交给 GitHub Actions。开源免费的 GEO 医生（geo-doctor）就是按这个思路设计的，不需要服务器，也没有数据库。
 
-先说明：本文作者是 GEO 医生的维护者。
+先说明：本文作者是 GEO 医生的维护者，文章由 AI（Claude）辅助起草、作者审核。
 
 ## 第一步：列出用户会问 AI 的问题
 

@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   parseDraft, loadDrafts, publicBody, parseFacts, mdToHtml, mdToText, checkDrafts, similarity,
-  articleHtml, renderFor, readLog, appendLog, parseArgs, main,
+  articleHtml, renderFor, readLog, appendLog, parseArgs, main, toDevto, devtoTags, devtoArticles,
 } from '../cli/geo-publish.mjs';
 import { audit } from '../cli/geo-audit.mjs';
 
@@ -379,4 +379,69 @@ test('article HTML escapes the title and keeps JSON-LD safe', () => {
   assert.ok(h.includes('<title>A &lt;/script&gt;&lt;b&gt;</title>'));
   assert.ok(!/<\/script><b>/.test(h));
   assert.ok(h.includes('\\u003c/script>'));
+});
+
+test('post --to devto: only confirmed drafts that list devto, key from the environment', async () => {
+  const geo = setup({
+    'a.md': draft({ ...GOOD, platforms: '[site, devto]' }),
+    'b.md': draft({ ...GOOD, slug: 'zh-only', title: '只发知乎', platforms: '[zhihu]' }, BODY.replace('能。', '可以。')),
+  });
+  cleanup.push(join(geo, '..'));
+  const noKey = await run(['post', join(geo, 'drafts'), '--to', 'devto']);
+  assert.equal(noKey.code, 2);
+  assert.match(noKey.err, /DEVTO_API_KEY/);
+  assert.equal((await run(['post', join(geo, 'drafts'), '--to', 'zhihu'])).code, 2);
+  const dry = await run(['post', join(geo, 'drafts'), '--to', 'devto', '--dry-run']);
+  assert.equal(dry.code, 0);
+  assert.match(dry.out, /offline-budget-app/);
+  assert.doesNotMatch(dry.out, /zh-only/);
+  const c = checkDrafts(loadDrafts(join(geo, 'drafts')), { lang: 'zh' });
+  assert.ok(!c.some((x) => x.code === 'bad-platform'));
+});
+
+test('toDevto creates once, then updates the same title and never unpublishes', async () => {
+  const d = loadDrafts(join(setup({ 'a.md': draft({ ...GOOD, platforms: '[devto]', tags: '[GEO, AI Search, open-source, 记账, extra]' }) }), 'drafts'))[0];
+  const calls = []; let stored = [];
+  const req = async (method, url, { headers, body } = {}) => {
+    calls.push({ method, url, key: headers['api-key'], body });
+    if (method === 'GET') return { ok: true, status: 200, json: stored };
+    const a = { id: 7, title: body.article.title, published: body.article.published, url: 'https://dev.to/me/post-7' };
+    stored = [a];
+    return { ok: true, status: 200, json: a };
+  };
+  const t = { dry: (s) => s, httpFail: (c, m) => `${c} ${m}`, posted: (s, u, st) => `new ${u} ${st}`, repost: (s, u, st) => `upd ${u} ${st}` };
+  const log = [];
+  const first = await toDevto(d, { key: 'k', status: 'publish' }, t, (x) => log.push(x), req);
+  assert.deepEqual(first, { url: 'https://dev.to/me/post-7', status: 'publish' });
+  assert.equal(calls[1].method, 'POST');
+  assert.equal(calls[1].key, 'k');
+  assert.deepEqual(calls[1].body.article.tags, ['geo', 'aisearch', 'opensource', 'extra']);
+  assert.doesNotMatch(calls[1].body.article.body_markdown, /核对表|内部备注/);
+  const second = await toDevto(d, { key: 'k', status: 'draft' }, t, (x) => log.push(x), req);
+  assert.equal(calls[3].method, 'PUT');
+  assert.match(calls[3].url, /articles\/7$/);
+  assert.equal(second.status, 'publish');
+  assert.deepEqual(devtoTags(['A-b', 'a b', '中文']), ['ab']);
+});
+
+test('toDevto waits and retries when dev.to rate-limits, and reuses one article listing', async () => {
+  const d = loadDrafts(join(setup({ 'a.md': draft({ ...GOOD, platforms: '[devto]' }) }), 'drafts'))[0];
+  const calls = []; const slept = []; let posts = 0;
+  const req = async (method, url) => {
+    calls.push(method);
+    if (method === 'GET') return { ok: true, status: 200, json: [] };
+    posts++;
+    if (posts < 3) return { ok: false, status: 429, json: { error: 'Rate limit reached' }, text: '', retryAfter: posts === 1 ? 5 : 0 };
+    return { ok: true, status: 201, json: { id: 1, title: d.title, published: false, url: 'https://dev.to/x' } };
+  };
+  const t = { dry: (s) => s, httpFail: (c, m) => `${c} ${m}`, posted: () => 'new', repost: () => 'upd' };
+  const existing = await devtoArticles('k', t, req);
+  const r = await toDevto(d, { key: 'k', status: 'draft', existing }, t, () => {}, req, async (ms) => slept.push(ms));
+  assert.equal(r.status, 'draft');
+  assert.deepEqual(slept, [5000, 30000]);
+  assert.deepEqual(calls, ['GET', 'POST', 'POST', 'POST']);
+  assert.equal(existing.length, 1);
+  const again = await toDevto(d, { key: 'k', status: 'draft', existing }, t, () => {}, async (m, u) => { calls.push(m); return { ok: true, status: 200, json: { url: 'https://dev.to/x', published: false } }; });
+  assert.equal(again.url, 'https://dev.to/x');
+  assert.equal(calls.at(-1), 'PUT');
 });
