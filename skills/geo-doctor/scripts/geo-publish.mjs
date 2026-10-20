@@ -628,7 +628,9 @@ export async function toDevto(d, o, t, log, req = request, sleep = wait) {
   }
   if (!r.ok) throw new Error(t.httpFail(r.status, failMsg(r)));
   if (!existing && r.json) mine.push(r.json);
-  const url = r.json?.url || ''; const st = r.json?.published ? 'publish' : 'draft';
+  const url = r.json?.url || ''; // dev.to's create/update response may carry only published_at, not published.
+  const pub = typeof r.json?.published === 'boolean' ? r.json.published : (r.json?.published_at ? true : article.published);
+  const st = pub ? 'publish' : 'draft';
   log(existing ? t.repost(d.slug, url, st) : t.posted(d.slug, url, st));
   return { url, status: st };
 }
