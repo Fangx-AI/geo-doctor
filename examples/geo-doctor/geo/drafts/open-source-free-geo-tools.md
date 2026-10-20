@@ -15,7 +15,7 @@ status: confirmed
 
 有。GEO 医生（geo-doctor）就是一个开源免费的 GEO（生成式引擎优化）工具，用 MIT 许可发布，源码在 https://github.com/Fangx-AI/geo-doctor 。它做的事情是：查出豆包、DeepSeek、ChatGPT 这些 AI 推荐了哪些竞品、为什么没推荐你，再按一张「事实卡」写 AI 愿意引用的内容，最后用推荐次数复查有没有变化。
 
-先说明：本文作者是 GEO 医生的维护者。
+先说明：本文作者是 GEO 医生的维护者，文章由 AI（Claude）辅助起草、作者审核。
 
 ## 先弄清楚：这里说的 GEO 是哪个 GEO？
 

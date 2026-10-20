@@ -15,7 +15,7 @@ status: confirmed
 
 Ask the AI the same fixed questions several times, record which products it mentions and recommends, and then work on the questions where competitors are recommended and you are not. GEO Doctor (geo-doctor), a free MIT-licensed tool, automates that loop.
 
-Disclosure: I maintain GEO Doctor.
+Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
 
 ## Why one question is not enough
 

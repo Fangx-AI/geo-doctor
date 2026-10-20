@@ -559,7 +559,7 @@ async function request(method, url, { headers = {}, body } = {}) {
   });
   const text = await res.text(); let json = null;
   try { json = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
-  return { status: res.status, ok: res.ok, json, text };
+  return { status: res.status, ok: res.ok, json, text, retryAfter: Number(res.headers.get('retry-after')) || 0 };
 }
 
 const failMsg = (r) => (r.json && (r.json.message || r.json.error)) || r.text.slice(0, 200).trim();
@@ -595,23 +595,39 @@ async function toHttp(d, o, t, log) {
 // dev.to tags: at most 4, lowercase letters and digits only.
 export const devtoTags = (tags) => [...new Set(tags.map((x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '')).filter(Boolean))].slice(0, 4);
 
-// Finds an earlier copy by title (so a lost log never means a duplicate post), then creates or updates it.
-export async function toDevto(d, o, t, log, req = request) {
+// The user's own articles on dev.to, read once per run so each draft can find its earlier copy by title.
+export async function devtoArticles(key, t, req = request) {
+  const all = [];
+  for (let page = 1; page <= 10; page++) {
+    const r = await req('GET', `${AUTO.devto.api}/articles/me/all?per_page=100&page=${page}`, { headers: { 'api-key': key } });
+    if (!r.ok) throw new Error(t.httpFail(r.status, failMsg(r)));
+    const list = Array.isArray(r.json) ? r.json : [];
+    all.push(...list);
+    if (list.length < 100) break;
+  }
+  return all;
+}
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Creates or updates one article. dev.to allows about 10 writes per 30 seconds: on HTTP 429 it waits as long as
+// the server asks (Retry-After, else 30 s) and tries again, up to 3 times.
+export async function toDevto(d, o, t, log, req = request, sleep = wait) {
   const headers = { 'api-key': o.key };
   const article = { title: d.title, body_markdown: publicBody(d).trim() + '\n', published: o.status === 'publish', tags: devtoTags(d.tags), description: d.meta.description || '' };
   if (o.dryRun) { log(t.dry(`POST ${AUTO.devto.api}/articles · ${d.slug} · ${o.status}`)); return null; }
-  let existing = null;
-  for (let page = 1; page <= 10 && !existing; page++) {
-    const r = await req('GET', `${AUTO.devto.api}/articles/me/all?per_page=100&page=${page}`, { headers });
-    if (!r.ok) throw new Error(t.httpFail(r.status, failMsg(r)));
-    const list = Array.isArray(r.json) ? r.json : [];
-    existing = list.find((a) => a.title === d.title) || null;
-    if (list.length < 100) break;
-  }
+  const mine = o.existing || await devtoArticles(o.key, t, req);
+  const existing = mine.find((a) => a.title === d.title) || null;
   // Never turn a published article back into a draft.
   if (existing && existing.published) article.published = true;
-  const r = await req(existing ? 'PUT' : 'POST', existing ? `${AUTO.devto.api}/articles/${existing.id}` : `${AUTO.devto.api}/articles`, { headers, body: { article } });
+  let r;
+  for (let attempt = 0; ; attempt++) {
+    r = await req(existing ? 'PUT' : 'POST', existing ? `${AUTO.devto.api}/articles/${existing.id}` : `${AUTO.devto.api}/articles`, { headers, body: { article } });
+    if (r.status !== 429 || attempt >= 3) break;
+    await sleep((r.retryAfter || 30) * 1000);
+  }
   if (!r.ok) throw new Error(t.httpFail(r.status, failMsg(r)));
+  if (!existing && r.json) mine.push(r.json);
   const url = r.json?.url || ''; const st = r.json?.published ? 'publish' : 'draft';
   log(existing ? t.repost(d.slug, url, st) : t.posted(d.slug, url, st));
   return { url, status: st };
@@ -794,10 +810,13 @@ export async function main(argv, { env = process.env, out = console.log, err = c
     if (!['draft', 'publish'].includes(status)) { err(t.badStatus); return 2; }
     const a = AUTO[o.to]; const key = env[a.keyEnv];
     if (!key && !o.dryRun) { err(t.noKey(a.keyEnv, a.keyPage)); return 2; }
-    let failed = 0;
+    let failed = 0; let existing = null;
+    if (!o.dryRun) {
+      try { existing = await devtoArticles(key, t); } catch (e) { err(`❌ ${e.message}`); return 1; }
+    }
     for (const d of picked) {
       try {
-        const r = await toDevto(d, { key, status, dryRun: o.dryRun }, t, out);
+        const r = await toDevto(d, { key, status, dryRun: o.dryRun, existing }, t, out);
         if (r) appendLog(logFile, { slug: d.slug, platform: o.to, url: r.url, status: r.status, title: d.title });
       } catch (e) { failed++; err(`❌ ${d.slug}: ${e.message}`); }
     }

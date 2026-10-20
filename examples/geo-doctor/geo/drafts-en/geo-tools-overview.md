@@ -15,7 +15,7 @@ status: confirmed
 
 GEO (generative engine optimization) tools fall into three groups: **monitoring who AI recommends**, **producing content at volume**, and **checking whether AI can read your site**. Decide which part you are missing before picking a tool. The free, open-source GEO Doctor (geo-doctor) covers monitoring, gap finding, fact-based drafting and readability checks, and deliberately does not do volume content production.
 
-Disclosure: I maintain GEO Doctor. For other products I only state what can be checked; see their own sites for details.
+Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me. For other products I only state what can be checked; see their own sites for details.
 
 ## Monitoring
 

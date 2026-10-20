@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   parseDraft, loadDrafts, publicBody, parseFacts, mdToHtml, mdToText, checkDrafts, similarity,
-  articleHtml, renderFor, readLog, appendLog, parseArgs, main, toDevto, devtoTags,
+  articleHtml, renderFor, readLog, appendLog, parseArgs, main, toDevto, devtoTags, devtoArticles,
 } from '../cli/geo-publish.mjs';
 import { audit } from '../cli/geo-audit.mjs';
 
@@ -422,4 +422,26 @@ test('toDevto creates once, then updates the same title and never unpublishes', 
   assert.match(calls[3].url, /articles\/7$/);
   assert.equal(second.status, 'publish');
   assert.deepEqual(devtoTags(['A-b', 'a b', '中文']), ['ab']);
+});
+
+test('toDevto waits and retries when dev.to rate-limits, and reuses one article listing', async () => {
+  const d = loadDrafts(join(setup({ 'a.md': draft({ ...GOOD, platforms: '[devto]' }) }), 'drafts'))[0];
+  const calls = []; const slept = []; let posts = 0;
+  const req = async (method, url) => {
+    calls.push(method);
+    if (method === 'GET') return { ok: true, status: 200, json: [] };
+    posts++;
+    if (posts < 3) return { ok: false, status: 429, json: { error: 'Rate limit reached' }, text: '', retryAfter: posts === 1 ? 5 : 0 };
+    return { ok: true, status: 201, json: { id: 1, title: d.title, published: false, url: 'https://dev.to/x' } };
+  };
+  const t = { dry: (s) => s, httpFail: (c, m) => `${c} ${m}`, posted: () => 'new', repost: () => 'upd' };
+  const existing = await devtoArticles('k', t, req);
+  const r = await toDevto(d, { key: 'k', status: 'draft', existing }, t, () => {}, req, async (ms) => slept.push(ms));
+  assert.equal(r.status, 'draft');
+  assert.deepEqual(slept, [5000, 30000]);
+  assert.deepEqual(calls, ['GET', 'POST', 'POST', 'POST']);
+  assert.equal(existing.length, 1);
+  const again = await toDevto(d, { key: 'k', status: 'draft', existing }, t, () => {}, async (m, u) => { calls.push(m); return { ok: true, status: 200, json: { url: 'https://dev.to/x', published: false } }; });
+  assert.equal(again.url, 'https://dev.to/x');
+  assert.equal(calls.at(-1), 'PUT');
 });

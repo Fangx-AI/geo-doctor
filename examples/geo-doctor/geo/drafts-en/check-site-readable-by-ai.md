@@ -15,7 +15,7 @@ status: confirmed
 
 Check four things: whether robots.txt blocks AI search crawlers, whether the page carries noindex, whether the main text is visible without running JavaScript, and whether crawlers are blocked by a firewall or CDN. GEO Doctor (geo-doctor) has a free, MIT-licensed checker for these.
 
-Disclosure: I maintain GEO Doctor.
+Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
 
 ## Why AI search may not see your site
 

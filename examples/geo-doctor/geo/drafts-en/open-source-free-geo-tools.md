@@ -15,7 +15,7 @@ status: confirmed
 
 Yes. GEO Doctor (geo-doctor) is a free, open-source GEO (generative engine optimization) tool under the MIT license: https://github.com/Fangx-AI/geo-doctor . It finds out which competitors AI assistants such as ChatGPT, DeepSeek and Doubao recommend, why they do not recommend you, writes content from a fact card that AI can cite, and re-checks the recommendation count afterwards.
 
-Disclosure: I maintain GEO Doctor.
+Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
 
 ## Which "GEO" is this?
 

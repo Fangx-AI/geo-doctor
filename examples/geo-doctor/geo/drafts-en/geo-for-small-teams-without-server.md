@@ -15,7 +15,7 @@ status: confirmed
 
 A small team can do GEO (generative engine optimization) without a server: run the work from an AI assistant or the command line on your own machine, host the fact site on free GitHub Pages, and let GitHub Actions run the weekly re-check. The free, open-source GEO Doctor (geo-doctor) is built that way: no server, no database.
 
-Disclosure: I maintain GEO Doctor.
+Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
 
 ## 1. List the questions people ask AI
 
