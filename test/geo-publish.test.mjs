@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   parseDraft, loadDrafts, publicBody, parseFacts, mdToHtml, mdToText, checkDrafts, similarity,
-  articleHtml, renderFor, readLog, appendLog, parseArgs, main, toDevto, devtoTags, devtoArticles,
+  articleHtml, renderFor, readLog, appendLog, parseArgs, main, toDevto, devtoTags, devtoArticles, fillItems, fillJson, fillUserscript,
 } from '../cli/geo-publish.mjs';
 import { audit } from '../cli/geo-audit.mjs';
 
@@ -454,4 +454,27 @@ test('toDevto reads the published state from published_at when dev.to omits publ
   assert.equal(live.status, 'publish');
   const quiet = await toDevto(d, { key: 'k', status: 'draft', existing: [] }, t, () => {}, reply({ id: 2, url: 'https://dev.to/y', published_at: null }));
   assert.equal(quiet.status, 'draft');
+});
+
+test('fill helper: items for Zhihu (HTML) and Juejin (Markdown), and a userscript that only fills', () => {
+  const d = loadDrafts(join(setup({ 'a.md': draft({ ...GOOD, platforms: '[site, zhihu, juejin, wechat]' }) }), 'drafts'))[0];
+  const items = fillItems([d], { urlFor: () => 'https://x.example/articles/offline-budget-app.html' });
+  assert.deepEqual(items.map((i) => `${i.key}:${i.format}`), ['zhihu/offline-budget-app:html', 'juejin/offline-budget-app:md']);
+  const [zh, jj] = items;
+  assert.equal(zh.title, GOOD.title);
+  assert.match(zh.body, /^<p>/);
+  assert.doesNotMatch(zh.body, /核对表|内部备注/);
+  assert.match(zh.body, /原文：https:\/\/x\.example\/articles\/offline-budget-app\.html/);
+  assert.doesNotMatch(jj.body, /^# /);
+  assert.deepEqual(jj.tags, ['记账', '离线']);
+  assert.equal(JSON.parse(fillJson(items)).items.length, 2);
+  const js = fillUserscript({ manifestUrl: 'https://x.example/brand/fill.json', name: '小鹿记账' });
+  assert.match(js, /^\/\/ ==UserScript==/);
+  assert.match(js, /@match\s+https:\/\/zhuanlan\.zhihu\.com\/write\*/);
+  assert.match(js, /@connect\s+x\.example/);
+  assert.match(js, /@updateURL\s+https:\/\/x\.example\/brand\/geo-fill\.user\.js/);
+  assert.match(js, /"manifest":"https:\/\/x\.example\/brand\/fill\.json"/);
+  // It fills fields and stops: nothing that submits, publishes or touches login state.
+  assert.doesNotMatch(js, /\.submit\(|document\.cookie|发布'\)\.click|publish.*click/i);
+  new Function(js); // parses
 });

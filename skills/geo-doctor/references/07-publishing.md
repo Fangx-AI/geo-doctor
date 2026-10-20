@@ -98,6 +98,8 @@ geo-publish pack geo/drafts --brand 品牌名
 geo-publish log --slug offline-budget-app --platform zhihu --url https://zhuanlan.zhihu.com/p/…
 ```
 
+**知乎、掘金：浏览器填稿助手，省掉复制粘贴。** 用 `geo-site build --base-url …` 生成事实站时，草稿 `platforms` 里写了 `zhihu` 或 `juejin` 的，会多生成 `fill.json`（文章列表）和 `geo-fill.user.js`（油猴脚本）。用户只需装一次 [Tampermonkey](https://www.tampermonkey.net/) 或 Violentmonkey，再打开 `<事实站网址>/geo-fill.user.js` 点安装。之后在自己已登录的浏览器里打开知乎专栏或掘金的写文章页，右下角会出现文章列表，点「填入」就把标题和正文填好，标签给出建议；正文填不进去时会自动复制到剪贴板，按 Ctrl+V 即可。它不登录、不读 Cookie、不点发布：检查排版、配图、点「发布」都由用户本人完成。文章有更新时事实站重新生成，脚本每次打开都读最新列表。
+
 不能运行命令时，按同样的分工手动做：官网的页面内容给用户或网站管理员，第三方平台的稿件按平台整理好给用户复制。
 
 ## 第三方内容：真实地争取，不能自己编

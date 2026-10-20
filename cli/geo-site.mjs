@@ -15,7 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { articleHtml, checkDrafts, loadDrafts, parseFacts, SITE } from './geo-publish.mjs';
+import { articleHtml, checkDrafts, FILL, fillItems, fillJson, fillUserscript, loadDrafts, parseFacts, SITE } from './geo-publish.mjs';
 
 export const VERSION = '1.0.0';
 const CONFIRMED = new Set(['已确认', 'confirmed', 'ok']);
@@ -417,7 +417,7 @@ export function sitemapXml(baseUrl, articles, date) {
 }
 
 // Every file of the site, as { path, text }. 生成整站文件列表。
-export function buildSite(facts, { lang = 'zh', baseUrl = null, articles = [] } = {}) {
+export function buildSite(facts, { lang = 'zh', baseUrl = null, articles = [], fill = [] } = {}) {
   const o = { lang, baseUrl, articles };
   const files = [
     { path: 'index.html', text: factsHtml(facts, o) },
@@ -433,6 +433,14 @@ export function buildSite(facts, { lang = 'zh', baseUrl = null, articles = [] } 
   }
   const date = /^\d{4}-\d{2}-\d{2}$/.test(facts.checkedOn) ? facts.checkedOn : null;
   if (baseUrl) files.push({ path: 'sitemap.xml', text: sitemapXml(baseUrl, articles, date) });
+  // Browser fill helper for Zhihu/Juejin: the article list plus a userscript that reads it from this site.
+  if (baseUrl && fill.length) {
+    const items = fillItems(fill, { urlFor: (d) => (articles.includes(d) ? joinUrl(baseUrl, `articles/${d.slug}.html`) : '') });
+    if (items.length) {
+      files.push({ path: 'fill.json', text: fillJson(items) });
+      files.push({ path: 'geo-fill.user.js', text: fillUserscript({ manifestUrl: joinUrl(baseUrl, 'fill.json'), name: siteModel(facts).name }) });
+    }
+  }
   return files;
 }
 
@@ -542,13 +550,14 @@ export async function main(argv, { out = console.log, err = console.error } = {}
   const unconfirmed = facts.entries.filter((e) => !e.confirmed && hasContent(e)).length;
   if (unconfirmed) err(t.skippedFacts(unconfirmed));
 
-  let articles = [];
+  let articles = []; let fill = [];
   if (o.drafts && !existsSync(o.drafts)) { err(t.noDrafts(o.drafts)); return 2; }
   if (o.drafts) {
     const drafts = loadDrafts(resolve(o.drafts));
     const issues = checkDrafts(drafts, { facts: parseFacts(raw), lang });
     const bad = new Set(issues.filter((x) => x.level === 'error').map((x) => x.file));
     articles = drafts.filter((d) => d.confirmed && d.platforms.includes(SITE) && !bad.has(d.file));
+    fill = drafts.filter((d) => d.confirmed && d.platforms.some((p) => FILL[p]) && !bad.has(d.file));
     const left = drafts.filter((d) => !articles.includes(d)).map((d) => d.file);
     if (left.length) err(t.skippedDrafts(left));
   }
@@ -556,7 +565,7 @@ export async function main(argv, { out = console.log, err = console.error } = {}
   if (!baseUrl) err(t.noBase);
 
   const outDir = resolve(o.out);
-  const files = buildSite(facts, { lang, baseUrl, articles });
+  const files = buildSite(facts, { lang, baseUrl, articles, fill });
   // The manifest lists files earlier runs wrote, so stale ones are removed (and nothing else is).
   const manifest = join(outDir, '.geo-site.json');
   let previous = [];

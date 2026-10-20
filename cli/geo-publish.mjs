@@ -717,6 +717,130 @@ function packDrafts(drafts, o, t, lang, logRows) {
   return { files, count: rows.length, warnings };
 }
 
+// ---------------------------------------------------------------- fill
+
+// Editors the browser helper can fill. It runs in the person's own logged-in browser, fills the title and body,
+// and stops there: the person reviews and clicks publish. No login, no cookies, no clicking publish.
+// 浏览器填稿助手支持的编辑器：在你自己已登录的浏览器里填好标题和正文就停下，由你检查后点发布。不登录、不碰 Cookie、不替你点发布。
+export const FILL = {
+  zhihu: { match: ['https://zhuanlan.zhihu.com/write*', 'https://zhuanlan.zhihu.com/p/*/edit*'], format: 'html' },
+  juejin: { match: ['https://juejin.cn/editor/*'], format: 'md' },
+};
+export const FILL_VERSION = '1.0.0';
+
+// One item per draft and fill-able platform, rendered the same way pack renders it (original link included).
+export function fillItems(drafts, { urlFor = () => '' } = {}) {
+  const items = [];
+  for (const d of drafts) {
+    for (const p of d.platforms) {
+      if (!FILL[p]) continue;
+      const { text } = renderFor(p, d, { url: urlFor(d) || '', lang: d.lang === 'en' ? 'en' : 'zh' });
+      const md = text.replace(/^# .*\n+/, '');
+      items.push({ key: `${p}/${d.slug}`, slug: d.slug, platform: p, title: d.title, format: FILL[p].format,
+        body: FILL[p].format === 'html' ? mdToHtml(md) : md, text: mdToText(md), tags: d.tags });
+    }
+  }
+  return items;
+}
+
+export function fillJson(items) {
+  return JSON.stringify({ generator: 'geo-publish', version: FILL_VERSION, items }, null, 2) + '\n';
+}
+
+// Runs inside the editor page (Tampermonkey / Violentmonkey). Kept free of outside references: it is serialised.
+function fillHelper(cfg) {
+  const host = location.hostname;
+  const platform = /(^|\.)zhihu\.com$/.test(host) ? 'zhihu' : /(^|\.)juejin\.cn$/.test(host) ? 'juejin' : null;
+  if (!platform || window.top !== window.self) return;
+  const SEL = {
+    zhihu: { title: ['textarea[placeholder*="标题"]', 'input[placeholder*="标题"]'], body: ['.public-DraftEditor-content', '[contenteditable="true"]'] },
+    juejin: { title: ['input.title-input', 'input[placeholder*="标题"]'], body: ['.bytemd-editor .CodeMirror', '.CodeMirror', '.bytemd-editor textarea'] },
+  }[platform];
+  const pageWin = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+  const get = (k, d) => { try { return JSON.parse(GM_getValue(k, JSON.stringify(d))); } catch (e) { return d; } };
+  const put = (k, v) => GM_setValue(k, JSON.stringify(v));
+  const find = (list) => { for (const s of list) { const el = document.querySelector(s); if (el) return el; } return null; };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  async function waitFind(list, ms = 8000) { for (let t = 0; t < ms; t += 250) { const el = find(list); if (el) return el; await sleep(250); } return null; }
+  const norm = (s) => String(s || '').replace(/\s+/g, '');
+  const probe = (it) => norm(it.text).slice(0, 12);
+
+  function setField(el, v) {
+    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, v);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  function paste(el, it) {
+    el.focus();
+    // Select what is already there, so filling again replaces the text instead of appending to it.
+    document.execCommand('selectAll');
+    const dt = new DataTransfer();
+    if (it.format === 'html') dt.setData('text/html', it.body);
+    dt.setData('text/plain', it.format === 'html' ? it.text : it.body);
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }
+  async function fillBody(el, it) {
+    // CodeMirror keeps its API on the page's own element object, which a sandboxed script only sees via unsafeWindow.
+    const cm = el.classList && el.classList.contains('CodeMirror') ? ((pageWin.document.querySelector('.CodeMirror') || {}).CodeMirror || el.CodeMirror) : null;
+    if (cm && typeof cm.setValue === 'function') { cm.setValue(it.body); return norm(cm.getValue()).includes(probe(it)); }
+    paste(el, it);
+    await sleep(600);
+    return norm(el.textContent || el.value).includes(probe(it));
+  }
+  async function fill(it, say) {
+    const title = await waitFind(SEL.title);
+    const body = await waitFind(SEL.body);
+    if (title) setField(title, it.title);
+    const ok = body ? await fillBody(body, it) : false;
+    if (!ok) GM_setClipboard(it.body, it.format === 'html' ? 'html' : 'text');
+    const marks = get('filled', {}); marks[it.key] = new Date().toISOString().slice(0, 10); put('filled', marks);
+    say([title ? '✅ 标题已填' : '⚠️ 没找到标题框，请手动填标题', ok ? '✅ 正文已填' : '⚠️ 正文没能自动填入，已复制到剪贴板：点一下正文区，按 Ctrl+V（Mac 用 ⌘V）',
+      it.tags && it.tags.length ? `标签建议：${it.tags.join('、')}` : '', '请检查排版，确认无误后由你点「发布」。'].filter(Boolean).join('\n'));
+  }
+
+  const root = document.createElement('div');
+  root.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647';
+  const sh = root.attachShadow({ mode: 'open' });
+  sh.innerHTML = `<style>
+    .p{width:300px;max-height:60vh;overflow:auto;background:#fff;color:#222;border:1px solid #ccd;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.15);font:13px/1.5 system-ui,sans-serif}
+    .h{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #eee;font-weight:600}
+    .i{padding:8px 12px;border-bottom:1px solid #f2f2f2}.t{margin-bottom:4px}.m{color:#888;font-size:12px}
+    button{font:inherit;cursor:pointer;border:1px solid #1772f6;background:#1772f6;color:#fff;border-radius:6px;padding:2px 10px}
+    button.x{background:none;border:none;color:#888;padding:0 4px}.msg{white-space:pre-wrap;padding:8px 12px;background:#f6f8fa}
+    </style>
+    <div class="p"><div class="h"><span>GEO 医生 · 填稿</span><button class="x" data-toggle>–</button></div><div class="b"><div class="msg">正在读取文章…</div></div></div>`;
+  document.documentElement.appendChild(root);
+  const box = sh.querySelector('.b');
+  sh.querySelector('[data-toggle]').onclick = (e) => { box.hidden = !box.hidden; e.target.textContent = box.hidden ? '+' : '–'; };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function render(items, note) {
+    const marks = get('filled', {});
+    box.innerHTML = (note ? `<div class="msg">${esc(note)}</div>` : '') + (items.length ? items.map((it, i) => `<div class="i"><div class="t">${esc(it.title)}</div>
+      <button data-i="${i}">${marks[it.key] ? '再填一次' : '填入'}</button> <span class="m">${marks[it.key] ? `已填过 ${esc(marks[it.key])}` : ''}</span></div>`).join('')
+      : '<div class="msg">没有给这个平台准备的文章。</div>');
+    box.querySelectorAll('button[data-i]').forEach((b) => { b.onclick = () => fill(items[+b.dataset.i], (m) => render(items, m)); });
+  }
+  GM_xmlhttpRequest({
+    method: 'GET', url: cfg.manifest + (cfg.manifest.includes('?') ? '&' : '?') + 't=' + Date.now(),
+    onload: (r) => { try { render((JSON.parse(r.responseText).items || []).filter((x) => x.platform === platform)); } catch (e) { render([], '文章列表读取失败：' + e.message); } },
+    onerror: () => render([], '读不到文章列表：' + cfg.manifest),
+  });
+}
+
+export function fillUserscript({ manifestUrl, name = 'GEO' }) {
+  const u = new URL(manifestUrl);
+  const self = new URL('geo-fill.user.js', manifestUrl).href;
+  const meta = [
+    ['name', `GEO 医生 · 填稿助手（${name}）`], ['namespace', `geo-doctor/${u.host}${u.pathname}`], ['version', FILL_VERSION],
+    ['description', '在你自己的浏览器里把已确认的文章填进知乎、掘金编辑器，由你检查后点发布。不登录、不代发。'],
+    ...Object.values(FILL).flatMap((f) => f.match.map((m) => ['match', m])),
+    ['grant', 'GM_xmlhttpRequest'], ['grant', 'GM_getValue'], ['grant', 'GM_setValue'], ['grant', 'GM_setClipboard'], ['grant', 'unsafeWindow'],
+    ['connect', u.hostname], ['downloadURL', self], ['updateURL', self], ['run-at', 'document-idle'],
+  ];
+  return `// ==UserScript==\n${meta.map(([k, v]) => `// @${k.padEnd(12)} ${v}`).join('\n')}\n// ==/UserScript==\n// Generated by geo-doctor (https://github.com/Fangx-AI/geo-doctor). MIT.\n\n(${fillHelper.toString()})(${JSON.stringify({ manifest: manifestUrl })});\n`;
+}
+
 // ---------------------------------------------------------------- CLI
 
 function detectLang() {
