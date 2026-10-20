@@ -1,0 +1,49 @@
+name: geo-site
+# GEO Doctor's own fact site (it is its own first patient): rebuilt from examples/geo-doctor/geo whenever the
+# fact card, its articles or the site generator change, deployed to GitHub Pages and audited.
+# Generated with `geo-site action`, then pointed at examples/geo-doctor and the repo's own cli/.
+# GEO 医生自己的事实站：事实卡、文章或生成器有改动时重新生成，发布到 GitHub Pages，再体检一次。
+on:
+  push:
+    paths: ['examples/geo-doctor/geo/**', 'cli/geo-site.mjs', '.github/workflows/geo-site.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    # Publish from the default branch only, whatever it is called; other branches (such as review PRs) never go live.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: pages
+        uses: actions/configure-pages@v5
+      - name: Build fact site
+        run: |
+          G=examples/geo-doctor/geo
+          DRAFTS=""
+          if [ -d "$G/drafts" ]; then DRAFTS="--drafts $G/drafts"; fi
+          node cli/geo-site.mjs build --facts "$G/fact-card.yaml" $DRAFTS --out _site --base-url "${{ steps.pages.outputs.base_url }}/"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Audit the live site
+        continue-on-error: true
+        run: |
+          sleep 20
+          URL="${{ steps.deployment.outputs.page_url }}"
+          node cli/geo-audit.mjs "$URL" "${URL}faq.html" --report audit.md
+          cat audit.md >> "$GITHUB_STEP_SUMMARY"
