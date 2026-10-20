@@ -445,3 +445,13 @@ test('toDevto waits and retries when dev.to rate-limits, and reuses one article 
   assert.equal(again.url, 'https://dev.to/x');
   assert.equal(calls.at(-1), 'PUT');
 });
+
+test('toDevto reads the published state from published_at when dev.to omits published', async () => {
+  const d = loadDrafts(join(setup({ 'a.md': draft({ ...GOOD, platforms: '[devto]' }) }), 'drafts'))[0];
+  const t = { dry: (s) => s, httpFail: (c, m) => `${c} ${m}`, posted: () => 'new', repost: () => 'upd' };
+  const reply = (json) => async (m) => (m === 'GET' ? { ok: true, status: 200, json: [] } : { ok: true, status: 201, json });
+  const live = await toDevto(d, { key: 'k', status: 'publish', existing: [] }, t, () => {}, reply({ id: 1, url: 'https://dev.to/x', published_at: '2026-10-20T05:14:00Z' }));
+  assert.equal(live.status, 'publish');
+  const quiet = await toDevto(d, { key: 'k', status: 'draft', existing: [] }, t, () => {}, reply({ id: 2, url: 'https://dev.to/y', published_at: null }));
+  assert.equal(quiet.status, 'draft');
+});
