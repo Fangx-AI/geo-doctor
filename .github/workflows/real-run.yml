@@ -2,9 +2,9 @@ name: real-run
 # Runs the whole loop once against a real AI API, on the example project in examples/geo-doctor
 # (GEO Doctor as its own first patient): sample, find gaps, extract facts from README.md,
 # draft one article, check it, report and build the fact site. Output goes to the run summary
-# and an artifact. Manual only; it needs the chosen AI's key as a repository secret.
+# an artifact and the real-run-results branch. Manual only; it needs the chosen AI's key as a repository secret.
 # 用真实 API 把全流程跑一遍（拿 GEO 医生自己当病人）：采样、找缺口、从 README 抽事实、写一篇稿、
-# 检查、出报告、生成事实站。结果在运行摘要和附件里。只能手动触发，需要在仓库 Secrets 里加对应的 API Key。
+# 检查、出报告、生成事实站。结果在运行摘要、附件和 real-run-results 分支里。只能手动触发，需要在仓库 Secrets 里加对应的 API Key。
 on:
   workflow_dispatch:
     inputs:
@@ -14,8 +14,13 @@ on:
       times:
         description: 'How many times to ask each question'
         default: '1'
+# write: results are also committed to the real-run-results branch, so they can be read and compared later.
 permissions:
-  contents: read
+  contents: write
+# One run at a time, so two runs never race to push the results branch.
+concurrency:
+  group: real-run
+  cancel-in-progress: false
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -62,11 +67,9 @@ jobs:
             echo "$out"
             echo "::endgroup::"
             printf '### %s · exit %s\n\n```\n%s\n```\n\n' "$title" "$code" "$(echo "$out" | head -c 20000)" >> "$S"
-            # Failed steps also become annotations, readable through the API without the log.
-            if [ "$code" != 0 ]; then
-              local msg; msg=$(echo "$out" | tail -c 3000); msg=${msg//'%'/'%25'}; msg=${msg//$'\r'/'%0D'}; msg=${msg//$'\n'/'%0A'}
-              echo "::error title=$title (exit $code)::$msg"
-            fi
+            # Every step's output tail also becomes an annotation (error if it failed), readable through the API without the log.
+            local msg; msg=$(echo "$out" | tail -c 6000); msg=${msg//'%'/'%25'}; msg=${msg//$'\r'/'%0D'}; msg=${msg//$'\n'/'%0A'}
+            if [ "$code" != 0 ]; then echo "::error title=$title (exit $code)::$msg"; else echo "::notice title=$title::$msg"; fi
             return $code
           }
           printf '# GEO 医生真实全流程 · %s · %s\n\n> 真实 API 调用，原样输出，没有修饰。API 回答不登录、多数不联网，和 App 里可能不同。\n\n' "$AI" "$(date -u +%Y-%m-%d)" >> "$S"
@@ -97,3 +100,17 @@ jobs:
             work/geo
             work/site
           if-no-files-found: ignore
+      # Keeps every run's raw answers and report under results/<time>-<ai>/ on its own branch (never on master).
+      - name: Save results to the real-run-results branch
+        if: always() && hashFiles('work/geo/**') != ''
+        run: |
+          D="results/$(date -u +%Y-%m-%d-%H%M)-${AI//[^A-Za-z0-9_-]/-}"
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git fetch -q origin real-run-results; then
+            git worktree add -q --detach ../res FETCH_HEAD
+          else
+            git worktree add -q --detach ../res && (cd ../res && git checkout -q --orphan results && git rm -rqf .)
+          fi
+          mkdir -p "../res/$D" && cp -r work/geo/. "../res/$D/"
+          cd ../res && git add -A && git commit -qm "real-run $D" && git push -q origin HEAD:refs/heads/real-run-results
