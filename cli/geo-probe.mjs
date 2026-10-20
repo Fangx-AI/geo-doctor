@@ -201,9 +201,13 @@ export function judgeBrand(text, brand) {
   return { verdict: recommended ? '推荐' : mentioned ? '仅提及' : '否', first };
 }
 
-export function analyse(text, ours, competitors) {
+// A brand the question already names ("X 和 Y 有什么区别？") is echoed in the answer's headings and tables, so it
+// counts as mentioned at most, never as recommended.
+export function analyse(text, ours, competitors, question = '') {
   const all = [...ours.length ? [{ name: ours[0].name, aliases: ours.flatMap((b) => b.aliases), self: true }] : [], ...competitors];
-  const seen = all.map((b) => ({ ...b, ...judgeBrand(text, b) })).filter((b) => b.first >= 0).sort((a, b) => a.first - b.first);
+  const named = (b) => b.aliases.some((a) => aliasRe(a).test(question));
+  const seen = all.map((b) => { const j = judgeBrand(text, b); return { ...b, ...j, verdict: j.verdict === '推荐' && named(b) ? '仅提及' : j.verdict }; })
+    .filter((b) => b.first >= 0).sort((a, b) => a.first - b.first);
   const me = seen.find((b) => b.self);
   const recommended = seen.filter((b) => b.verdict === '推荐').map((b) => b.name);
   return {
@@ -494,7 +498,7 @@ export async function main(argv, { env = process.env, out = console.log, err = c
     await pool(jobs, concurrency, async ({ q, round }, k) => {
       let r = null; let error = '';
       try { r = await askWithRetry(x.p, { base: x.base, key: env[x.keyVar] || '', model: x.model, question: q.question, maxTokens, timeoutMs, fetchImpl }, sleep); } catch (e) { error = e.message; err(t.failed(`${q.id}-${round}`, error)); }
-      const a = r && r.text ? analyse(r.text, ours, competitors) : { mentioned: '未知', recommended: '未知', position: '', who: [], mentionedBrands: [] };
+      const a = r && r.text ? analyse(r.text, ours, competitors, q.question) : { mentioned: '未知', recommended: '未知', position: '', who: [], mentionedBrands: [] };
       const status = !r ? '技术失败' : !r.text ? '不完整' : r.truncated ? '不完整' : '完整';
       const rel = join('runs', batch, `${q.id}-${round}.md`);
       writeFileSync(join(dirname(runsFile), rel), rawFile(q, round, ctx, r, { ...a, error }));

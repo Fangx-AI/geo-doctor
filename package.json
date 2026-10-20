@@ -1,6 +1,6 @@
 {
   "name": "geo-doctor",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "GEO toolkit: audit whether AI search (ChatGPT, Perplexity, Claude, Google AI, Doubao…) can read your page, sample AI answers through their APIs to count who gets recommended, batch-check and publish fact-based articles, build an AI-readable fact site from your fact card, and run the whole loop weekly (sample, draft for the gaps, report) as a pull request for review. A local web console (geo-studio) puts the loop in the browser. Part of geo-doctor (GEO 医生).",
   "type": "module",
   "bin": {

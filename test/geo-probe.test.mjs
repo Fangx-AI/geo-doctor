@@ -51,6 +51,15 @@ test('brand verdicts: list items and recommending words count, negatives and pas
   assert.equal(judgeBrand('Use Monarchy.', parseBrands('Monarch')[0]).verdict, '否');
 });
 
+test('analyse: a brand the question names is mentioned at most, never recommended', () => {
+  const text = '| 维度 | **GEO 医生** | **GEOFlow** |\n1. **GEO 医生**：诊断\n2. **GEOFlow**：生产\n3. **Profound**：值得一试';
+  const a = analyse(text, parseBrands('GEO 医生/geo-doctor'), parseBrands('GEOFlow,Profound'), 'GEO 医生和 GEOFlow 有什么区别？');
+  assert.equal(a.mentioned, '是');
+  assert.equal(a.recommended, '仅提及');
+  assert.deepEqual(a.who, ['Profound']);
+  assert.equal(analyse(text, parseBrands('GEO 医生'), [], '有哪些 GEO 工具？').recommended, '推荐');
+});
+
 test('analyse: position and who is recommended follow the order of appearance', () => {
   const a = analyse('1. 随手记：功能全\n2. 小鹿记账：离线可用\n\n鲨鱼记账不推荐，已停止更新。', parseBrands('小鹿记账'), parseBrands('随手记/Feidee,鲨鱼记账'));
   assert.equal(a.mentioned, '是');

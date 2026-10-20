@@ -401,11 +401,18 @@ export function similarity(a, b) {
   return inter / (A.size + B.size - inter);
 }
 
+// A claim that is denied ("不保证排名", "no guarantee") is the honest wording, not hype.
+// 被否定的说法（「不保证排名」）正是如实的写法，不算夸大。
+const NEGATED = { zh: /(?:不(?![仅但断少错停])|没有|无法|并非|绝不|从不|未(?!来))[^，。；！？\n]{0,2}$/, en: /\b(?:not|no|never|without|n't)\s+(?:\w+\s+)?$/i };
+
 function hypeHits(text, lang) {
   const hits = [];
   for (const w of [...HYPE.zh, ...(lang === 'en' ? HYPE.en : [])]) {
-    const re = /^[a-z]/i.test(w) ? new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\#]/g, '\\$&')}\\b`, 'i') : null;
-    if (re ? re.test(text) : text.includes(w)) hits.push(w);
+    const en = /^[a-z]/i.test(w);
+    const re = new RegExp(en ? `\\b${w.replace(/[.*+?^${}()|[\]\\#]/g, '\\$&')}\\b` : w.replace(/[.*+?^${}()|[\]\\#]/g, '\\$&'), 'gi');
+    for (const m of text.matchAll(re)) {
+      if (!(en ? NEGATED.en : NEGATED.zh).test(text.slice(Math.max(0, m.index - 20), m.index))) { hits.push(w); break; }
+    }
   }
   return hits;
 }
