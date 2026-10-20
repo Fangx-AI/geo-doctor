@@ -231,23 +231,13 @@ test('report: each batch is classified by its own question snapshot', () => {
   assert.deepEqual([newG.recommend.of, newG.correct.of], [0, 1]);
 });
 
-test('ask: Kimi runs its built-in web search and Qwen turns search on', async () => {
+test('ask: Qwen turns web search on; other providers get a plain request', async () => {
   const bodies = [];
   const reply = (json) => ({ ok: true, status: 200, json: async () => json });
-  const kimiFetch = async (url, init) => {
-    const b = JSON.parse(init.body); bodies.push(b);
-    if (bodies.length === 1) return reply({ choices: [{ finish_reason: 'tool_calls', message: { role: 'assistant', content: '', tool_calls: [{ id: 't1', type: 'builtin_function', function: { name: '$web_search', arguments: '{"q":"geo"}' } }] } }] });
-    return reply({ model: 'kimi-latest', choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: '推荐 GEO 医生' } }] });
-  };
-  const r = await ask(PROVIDERS.kimi, { base: 'http://x', key: 'k', model: 'kimi-latest', question: '有什么 GEO 工具？', maxTokens: 100, fetchImpl: kimiFetch });
-  assert.equal(r.text, '推荐 GEO 医生');
-  assert.deepEqual(bodies[0].tools, [{ type: 'builtin_function', function: { name: '$web_search' } }]);
-  assert.deepEqual(bodies[1].messages.at(-1), { role: 'tool', tool_call_id: 't1', name: '$web_search', content: '{"q":"geo"}' });
-  bodies.length = 0;
-  await ask(PROVIDERS.qwen, { base: 'http://x', key: 'k', model: 'qwen-plus', question: 'q', maxTokens: 100, fetchImpl: async (u, init) => { bodies.push(JSON.parse(init.body)); return reply({ choices: [{ finish_reason: 'stop', message: { content: 'a' } }] }); } });
+  const fetchImpl = async (u, init) => { bodies.push(JSON.parse(init.body)); return reply({ choices: [{ finish_reason: 'stop', message: { content: 'a' } }] }); };
+  await ask(PROVIDERS.qwen, { base: 'http://x', key: 'k', model: 'qwen-plus', question: 'q', maxTokens: 100, fetchImpl });
   assert.equal(bodies[0].enable_search, true);
-  assert.equal(bodies[0].tools, undefined);
-  bodies.length = 0;
-  await ask(PROVIDERS.deepseek, { base: 'http://x', key: 'k', model: 'deepseek-chat', question: 'q', maxTokens: 100, fetchImpl: async (u, init) => { bodies.push(JSON.parse(init.body)); return reply({ choices: [{ message: { content: 'a' } }] }); } });
-  assert.deepEqual(Object.keys(bodies[0]).sort(), ['max_tokens', 'messages', 'model']);
+  assert.deepEqual(bodies[0].search_options, { forced_search: true });
+  await ask(PROVIDERS.kimi, { base: 'http://x', key: 'k', model: 'kimi-latest', question: 'q', maxTokens: 100, fetchImpl });
+  assert.deepEqual(Object.keys(bodies[1]).sort(), ['max_tokens', 'messages', 'model']);
 });

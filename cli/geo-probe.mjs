@@ -24,7 +24,7 @@ export const VERSION = '1.0.0';
 export const PROVIDERS = {
   deepseek: { label: 'DeepSeek', base: 'https://api.deepseek.com/v1', key: 'DEEPSEEK_API_KEY', model: 'deepseek-chat', keyUrl: 'https://platform.deepseek.com/api_keys' },
   qwen: { label: '通义千问', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', key: 'DASHSCOPE_API_KEY', model: 'qwen-plus', search: true, extra: { enable_search: true, search_options: { forced_search: true } }, keyUrl: 'https://bailian.console.aliyun.com/' },
-  kimi: { label: 'Kimi', base: 'https://api.moonshot.cn/v1', key: 'MOONSHOT_API_KEY', model: 'kimi-latest', search: true, builtinSearch: '$web_search', keyUrl: 'https://platform.moonshot.cn/console/api-keys' },
+  kimi: { label: 'Kimi', base: 'https://api.moonshot.cn/v1', key: 'MOONSHOT_API_KEY', model: 'kimi-latest', keyUrl: 'https://platform.moonshot.cn/console/api-keys' },
   doubao: { label: '豆包', base: 'https://ark.cn-beijing.volces.com/api/v3', key: 'ARK_API_KEY', model: null, keyUrl: 'https://console.volcengine.com/ark' },
   hunyuan: { label: '腾讯混元（元宝）', base: 'https://api.hunyuan.cloud.tencent.com/v1', key: 'HUNYUAN_API_KEY', model: 'hunyuan-turbos-latest', keyUrl: 'https://console.cloud.tencent.com/hunyuan/api-key' },
   openai: { label: 'OpenAI', base: 'https://api.openai.com/v1', key: 'OPENAI_API_KEY', model: 'gpt-5-mini', keyUrl: 'https://platform.openai.com/api-keys' },
@@ -237,26 +237,16 @@ export async function ask(provider, { base, key, model, question, maxTokens, tim
       const sources = (data.content || []).flatMap((b) => (b.citations || []).map((c) => c.url)).filter(Boolean);
       return { text, sources, truncated: data.stop_reason === 'max_tokens', model: data.model || model };
     }
-    // Kimi searches through a built-in tool: the model asks for $web_search, we hand its arguments back unchanged
-    // and Moonshot runs the search. Qwen searches with enable_search. Other providers get a plain chat request.
-    const messages = [{ role: 'user', content: question }];
-    const tools = provider.builtinSearch ? [{ type: 'builtin_function', function: { name: provider.builtinSearch } }] : undefined;
-    let choice; let msg;
-    for (let round = 0; ; round++) {
-      res = await fetchImpl(`${base.replace(/\/$/, '')}/chat/completions`, {
-        method: 'POST', signal: ctl.signal,
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-        body: JSON.stringify({ model, max_tokens: maxTokens, messages, ...(tools ? { tools } : {}), ...(provider.extra || {}) }),
-      });
-      data = await res.json().catch(() => ({}));
-      if (!res.ok) throw httpError(res.status, data);
-      choice = (data.choices || [])[0] || {};
-      msg = choice.message || {};
-      const calls = (msg.tool_calls || []).filter((c) => c.function?.name === provider.builtinSearch);
-      if (!tools || choice.finish_reason !== 'tool_calls' || !calls.length || round >= 4) break;
-      messages.push(msg);
-      for (const c of calls) messages.push({ role: 'tool', tool_call_id: c.id, name: c.function.name, content: c.function.arguments || '{}' });
-    }
+    // Qwen searches the web through enable_search (extra); other providers get a plain chat request.
+    res = await fetchImpl(`${base.replace(/\/$/, '')}/chat/completions`, {
+      method: 'POST', signal: ctl.signal,
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: question }], ...(provider.extra || {}) }),
+    });
+    data = await res.json().catch(() => ({}));
+    if (!res.ok) throw httpError(res.status, data);
+    const choice = (data.choices || [])[0] || {};
+    const msg = choice.message || {};
     const text = typeof msg.content === 'string' ? msg.content : (msg.content || []).map((p) => p.text || '').join('');
     const sources = [
       ...(data.citations || []),

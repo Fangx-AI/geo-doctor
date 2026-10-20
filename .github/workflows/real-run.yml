@@ -98,7 +98,7 @@ jobs:
             if [ "$code" != 0 ]; then echo "::error title=$title (exit $code)::$msg"; else echo "::notice title=$title::$msg"; fi
             return $code
           }
-          printf '# GEO 医生真实全流程 · %s · %s\n\n> 真实 API 调用，原样输出，没有修饰。API 回答不登录；Kimi、通义千问开了联网搜索，DeepSeek 不联网；和 App 里可能不同。\n\n' "$AI" "$(date -u +%Y-%m-%d)" >> "$S"
+          printf '# GEO 医生真实全流程 · %s · %s\n\n> 真实 API 调用，原样输出，没有修饰。API 回答不登录；通义千问开了联网搜索，DeepSeek、Kimi 不联网；和 App 里可能不同。\n\n' "$AI" "$(date -u +%Y-%m-%d)" >> "$S"
           step "1 采样 geo-probe" node ../cli/geo-probe.mjs run geo/questions.csv --ai "$AI" --brand "$BRAND" --competitors "$COMP" --times "$TIMES" --runs geo/runs.csv --lang zh || FAILED="$FAILED probe"
           step "2 找缺口 geo-autopilot gaps" node ../cli/geo-autopilot.mjs gaps --lang zh || FAILED="$FAILED gaps"
           step "3 从 README 抽事实 geo-facts extract" node ../cli/geo-facts.mjs extract --ai "$GEN_AI" --facts geo/fact-card.yaml --lang zh || FAILED="$FAILED facts"
