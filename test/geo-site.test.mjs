@@ -251,3 +251,18 @@ test('the generated site scores 100 in geo-audit', async () => {
     }
   } finally { server.close(); }
 });
+
+test('build: drafts for Zhihu or Juejin also get fill.json and the browser fill helper', async () => {
+  const d = tmp();
+  mkdirSync(join(d, 'geo', 'drafts'), { recursive: true });
+  writeFileSync(join(d, 'geo', 'fact-card.yaml'), CARD);
+  writeFileSync(join(d, 'geo', 'drafts', 'a.md'), `---\ntitle: 离线记账\nslug: offline\nquestion: 有没有不联网的记账 App？\nstatus: confirmed\nfacts: [B03]\nplatforms: [site, zhihu, juejin]\ndescription: 说明\n---\n小鹿记账是不联网也能用的个人记账 App [B03]。${'正文'.repeat(200)}\n`);
+  const out = join(d, 'site');
+  assert.equal(await main(['build', '--facts', join(d, 'geo', 'fact-card.yaml'), '--drafts', join(d, 'geo', 'drafts'), '--out', out, '--base-url', 'https://x.example/b/'], quiet()), 0);
+  const fill = JSON.parse(readFileSync(join(out, 'fill.json'), 'utf8'));
+  assert.deepEqual(fill.items.map((i) => i.key), ['zhihu/offline', 'juejin/offline']);
+  assert.match(fill.items[1].body, /https:\/\/x\.example\/b\/articles\/offline\.html/);
+  assert.match(readFileSync(join(out, 'geo-fill.user.js'), 'utf8'), /"manifest":"https:\/\/x\.example\/b\/fill\.json"/);
+  assert.equal(await main(['build', '--facts', join(d, 'geo', 'fact-card.yaml'), '--drafts', join(d, 'geo', 'drafts'), '--out', out], quiet()), 0);
+  assert.ok(!existsSync(join(out, 'geo-fill.user.js')), 'no helper without a base URL to read the list from');
+});
