@@ -6,6 +6,9 @@ name: real-run
 # 用真实 API 把全流程跑一遍（拿 GEO 医生自己当病人）：采样、找缺口、从 README 抽事实、写一篇稿、
 # 检查、出报告、生成事实站。结果在运行摘要、附件和 real-run-results 分支里。只能手动触发，需要在仓库 Secrets 里加对应的 API Key。
 on:
+  # Weekly retest of the same questions, every Monday 01:00 UTC (09:00 Beijing), so the trend is comparable.
+  schedule:
+    - cron: '0 1 * * 1'
   workflow_dispatch:
     inputs:
       ai:
@@ -26,8 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      AI: ${{ inputs.ai }}
-      TIMES: ${{ inputs.times }}
+      AI: ${{ inputs.ai || 'deepseek' }}
+      TIMES: ${{ inputs.times || '2' }}
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
       MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
@@ -55,6 +58,14 @@ jobs:
           fi
           cp -r examples/geo-doctor work
           mkdir -p work/geo/sources && cp README.md work/geo/sources/README.md
+          # Carry earlier answers forward from the latest saved run, so the report shows the trend across weeks.
+          if git fetch -q --depth 1 origin real-run-results 2>/dev/null; then
+            LAST=$(git ls-tree --name-only FETCH_HEAD results/ | sort | tail -1)
+            if [ -n "$LAST" ]; then
+              mkdir -p prev && git archive FETCH_HEAD "$LAST" | tar -x -C prev
+              cp "prev/$LAST/runs.csv" work/geo/ 2>/dev/null && cp -r "prev/$LAST/runs" work/geo/ && echo "Earlier runs from $LAST"
+            fi
+          fi
           cd work
           BRAND=$(node -p "require('./geo/autopilot.json').brand")
           COMP=$(node -p "require('./geo/autopilot.json').competitors")
