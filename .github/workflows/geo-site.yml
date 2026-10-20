@@ -5,7 +5,7 @@ name: geo-site
 # GEO 医生自己的事实站：事实卡、文章或生成器有改动时重新生成，发布到 GitHub Pages，再体检一次。
 on:
   push:
-    paths: ['examples/geo-doctor/geo/**', 'cli/geo-site.mjs', '.github/workflows/geo-site.yml']
+    paths: ['examples/geo-doctor/geo/**', 'cli/geo-site.mjs', 'cli/geo-publish.mjs', '.github/workflows/geo-site.yml']
   workflow_dispatch:
 permissions:
   contents: read
