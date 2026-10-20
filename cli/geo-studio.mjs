@@ -41,9 +41,11 @@ const M = {
   数据都在 项目目录/geo/ 里，没有数据库。
 
   默认只监听本机。要监听其他地址（例如放在服务器上），先设置环境变量 GEO_STUDIO_TOKEN（至少 12 位），
-  打开页面时输入这个口令。API Key 只从环境变量读取（例如 DEEPSEEK_API_KEY），在启动前设置好。`,
+  打开页面时输入这个口令。口令在 HTTP 上是明文传输，对外使用时请放在 HTTPS 反向代理后面。
+  API Key 只从环境变量读取（例如 DEEPSEEK_API_KEY），在启动前设置好。`,
     started: (url) => `GEO 医生工作台已启动：${url}\n按 Ctrl+C 停止。`,
     needToken: '监听本机以外的地址时，请先设置环境变量 GEO_STUDIO_TOKEN（至少 12 位）。',
+    plainHttp: '注意：工作台本身只提供 HTTP，口令和内容都是明文传输。请只通过 HTTPS 反向代理（例如 Caddy、Nginx）对外访问。',
     badPort: (p) => `端口不对：${p}`,
     noDir: (d) => `找不到目录：${d}`,
   },
@@ -58,10 +60,12 @@ Usage:
   and the fact site (geo-site) with one click. Everything lives in project/geo/; there is no database.
 
   Listens on this machine only by default. To listen on another address (for example on a server),
-  set GEO_STUDIO_TOKEN (12+ characters) first and enter it when the page asks. API keys are read
-  from environment variables (for example OPENAI_API_KEY); set them before starting.`,
+  set GEO_STUDIO_TOKEN (12+ characters) first and enter it when the page asks. The token travels in
+  plain text over HTTP, so put the studio behind an HTTPS reverse proxy when it is reachable from outside.
+  API keys are read from environment variables (for example OPENAI_API_KEY); set them before starting.`,
     started: (url) => `GEO Doctor Studio is running: ${url}\nPress Ctrl+C to stop.`,
     needToken: 'Set GEO_STUDIO_TOKEN (12+ characters) before listening on an address other than this machine.',
+    plainHttp: 'Note: the studio itself only speaks HTTP, so the token and your data travel in plain text. Reach it only through an HTTPS reverse proxy (for example Caddy or Nginx).',
     badPort: (p) => `Invalid port: ${p}`,
     noDir: (d) => `Directory not found: ${d}`,
   },
@@ -345,7 +349,9 @@ export function createStudio({ dir = '.', lang = 'zh', env = process.env, token 
       for (const [k, tpl] of [['facts', 'fact-card.yaml'], ['questions', 'questions.csv']]) {
         if (!existsSync(p[k]) && existsSync(join(TEMPLATES, tpl))) { copyFileSync(join(TEMPLATES, tpl), p[k]); wrote.push(basename(p[k])); }
       }
-      if (!existsSync(p.config)) { writeFileSync(p.config, configTemplate(lang)); wrote.push('autopilot.json'); }
+      // Drafts written from the studio wait for approval on the Drafts page, so new projects never auto-confirm.
+      // 工作台里由人逐篇通过，所以新项目默认不自动确认。
+      if (!existsSync(p.config)) { writeFileSync(p.config, JSON.stringify({ ...JSON.parse(configTemplate(lang)), autoConfirm: false }, null, 2) + '\n'); wrote.push('autopilot.json'); }
       return send(res, 200, { ok: true, wrote });
     }
 
@@ -681,6 +687,7 @@ export async function main(argv, { env = process.env, out = console.log, err = c
   const loopback = LOOPBACK.has(host);
   const token = env.GEO_STUDIO_TOKEN || null;
   if (!loopback && (!token || token.length < 12)) { err(t.needToken); return 2; }
+  if (!loopback) err(t.plainHttp);
   if (!listen) return 0;
   const server = createStudio({ dir, lang, env, token, loopback });
   await new Promise((ok, fail) => { server.once('error', fail); server.listen(port, host, ok); });

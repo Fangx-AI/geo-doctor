@@ -196,6 +196,7 @@ test('studio: init starts an empty folder from the templates and never overwrite
   assert.deepEqual([s0.files.questions, s0.files.facts, s0.templates], [false, false, true]);
   const r = await call('/api/init', { method: 'POST', body: {} });
   assert.deepEqual(r.data.wrote.sort(), ['autopilot.json', 'fact-card.yaml', 'questions.csv']);
+  assert.equal(JSON.parse(readFileSync(join(d, 'geo', 'autopilot.json'), 'utf8')).autoConfirm, false, 'studio drafts wait for approval');
   writeFileSync(join(d, 'geo', 'autopilot.json'), '{"brand":"mine"}');
   assert.deepEqual((await call('/api/init', { method: 'POST', body: {} })).data.wrote, []);
   assert.equal(readFileSync(join(d, 'geo', 'autopilot.json'), 'utf8'), '{"brand":"mine"}');
@@ -217,7 +218,9 @@ test('CLI: listening beyond this machine needs a long GEO_STUDIO_TOKEN', async (
   assert.equal(await main(['--host', '0.0.0.0', '--lang', 'zh'], { env: {}, err: (s) => err.push(s), out: (s) => out.push(s), listen: false }), 2);
   assert.match(err.join('\n'), /GEO_STUDIO_TOKEN/);
   assert.equal(await main(['--host', '0.0.0.0', '--lang', 'zh'], { env: { GEO_STUDIO_TOKEN: 'short' }, err: () => {}, out: () => {}, listen: false }), 2);
-  assert.equal(await main(['--host', '0.0.0.0', '--lang', 'zh'], { env: { GEO_STUDIO_TOKEN: 'long-enough-token' }, err: () => {}, out: () => {}, listen: false }), 0);
+  const warn = [];
+  assert.equal(await main(['--host', '0.0.0.0', '--lang', 'zh'], { env: { GEO_STUDIO_TOKEN: 'long-enough-token' }, err: (x) => warn.push(x), out: () => {}, listen: false }), 0);
+  assert.match(warn.join('\n'), /HTTPS 反向代理/);
   assert.equal(await main(['--port', 'abc', '--lang', 'zh'], { env: {}, err: () => {}, out: () => {}, listen: false }), 2);
   assert.equal(await main(['--help', '--lang', 'en'], { env: {}, err: () => {}, out: (s) => out.push(s), listen: false }), 0);
   assert.match(out.join('\n'), /GEO Doctor Studio/);
