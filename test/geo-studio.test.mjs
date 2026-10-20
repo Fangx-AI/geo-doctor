@@ -1,7 +1,7 @@
 // Tests for cli/geo-studio.mjs. Run: npm test
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -283,6 +283,11 @@ test('studio: the distribution center formats, records links and serves the fill
   assert.equal(wx.status, 200);
   assert.equal(wx.data.format, 'html');
   assert.match(wx.data.text, /<h1 style=/);
+  // No original link until the article has a page; then the one the site log records. 有了页面才带原文链接。
+  writeFileSync(join(d, 'geo', 'autopilot.json'), JSON.stringify({ brand: '小鹿记账', ai: 'deepseek', baseUrl: 'https://facts.example/' }));
+  assert.doesNotMatch((await call('/api/render/wechat/offline-budget-app.md')).data.text, /facts\.example/);
+  appendFileSync(join(d, 'geo', 'published.csv'), 'date,slug,platform,url,status,title\n2026-10-20,offline-budget-app,site,https://blog.example/offline,publish,x\n');
+  assert.match((await call('/api/render/wechat/offline-budget-app.md')).data.text, /blog\.example\/offline/);
   assert.equal((await call('/api/render/nope/offline-budget-app.md')).status, 400);
 
   const items = (await call('/fill.json')).data.items;
@@ -297,7 +302,7 @@ test('studio: the distribution center formats, records links and serves the fill
   assert.equal((await call('/api/published', { method: 'POST', body: { slug: 'nope', platform: 'zhihu', url: 'https://x.example/1' } })).status, 404);
   assert.equal((await call('/api/published', { method: 'POST', body: { slug: 'offline-budget-app', platform: 'zhihu', url: 'https://zhuanlan.zhihu.com/p/1' } })).status, 200);
   const s = (await call('/api/state')).data;
-  assert.deepEqual(s.published.map((r) => [r.platform, r.url, r.status]), [['zhihu', 'https://zhuanlan.zhihu.com/p/1', 'published']]);
+  assert.deepEqual(s.published.map((r) => [r.platform, r.url, r.status]), [['site', 'https://blog.example/offline', 'publish'], ['zhihu', 'https://zhuanlan.zhihu.com/p/1', 'published']]);
   assert.match(readFileSync(join(d, 'geo', 'published.csv'), 'utf8'), /^﻿?date,slug,platform,url,status,title/);
   assert.deepEqual(s.drafts[0].platforms, ['site', 'zhihu', 'wechat']);
   assert.deepEqual(s.channels.fill, ['zhihu', 'juejin']);

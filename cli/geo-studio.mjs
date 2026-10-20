@@ -471,7 +471,14 @@ export function createStudio({ dir = '.', lang = 'zh', env = process.env, token 
 
   const config = () => { try { return JSON.parse(read(p.config)); } catch { return {}; } };
   const brandName = () => String(config().brand || '').split(',')[0].trim();
-  const articleUrl = (d) => { const b = config().baseUrl; return b && d.platforms.includes(SITE) ? String(b).replace(/\/?$/, '/') + `articles/${d.slug}.html` : ''; };
+  // The original link: where the site log says the article went (static site or WordPress), else the built fact-site
+  // page under baseUrl. Nothing until the article actually has a page. 原文链接只用已经存在的页面。
+  function articleUrl(d) {
+    const logged = readLog(p.published).filter((r) => r.slug === d.slug && r.platform === SITE && r.status !== 'draft' && /^https?:\/\//.test(r.url)).pop();
+    if (logged) return logged.url;
+    const b = config().baseUrl;
+    return b && d.platforms.includes(SITE) && existsSync(join(p.site, 'articles', `${d.slug}.html`)) ? String(b).replace(/\/?$/, '/') + `articles/${d.slug}.html` : '';
+  }
   // Approved drafts that pass the publishing checks: the only ones handed to editors. 只交出已通过且检查无错的稿件。
   function publishable(file) {
     const state = readState(dir, { env, lang });
