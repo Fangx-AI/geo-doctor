@@ -70,7 +70,7 @@ jobs:
           step "3b 候选事实" node ../cli/geo-facts.mjs list --lang zh || true
           step "4 写稿 geo-autopilot write" node ../cli/geo-autopilot.mjs write --ai "$AI" --brand "GEO 医生" --max 1 --lang zh || FAILED="$FAILED write"
           if [ -d geo/drafts ]; then
-            step "5 检查草稿 geo-publish check" node ../cli/geo-publish.mjs check geo/drafts --lang zh || true
+            step "5 检查草稿 geo-publish check" node ../cli/geo-publish.mjs check geo/drafts --lang zh || FAILED="$FAILED check"
             for f in geo/drafts/*.md; do printf '#### 草稿全文 %s\n\n```markdown\n%s\n```\n\n' "$f" "$(head -c 12000 "$f")" >> "$S"; done
           fi
           step "6 报告 geo-autopilot report" node ../cli/geo-autopilot.mjs report --out geo/reports/real-run.md --lang zh || FAILED="$FAILED report"
@@ -79,10 +79,14 @@ jobs:
           step "7 事实站 geo-site build" node ../cli/geo-site.mjs build --facts geo/fact-card.yaml "${DRAFTS[@]}" --out site || FAILED="$FAILED site"
           if [ -n "$FAILED" ]; then printf '\n**失败的步骤 / Failed steps:**%s\n' "$FAILED" >> "$S"; exit 1; fi
           printf '\n**全部步骤成功 / All steps passed.**\n' >> "$S"
+      # Artifact names cannot contain ":" (deepseek:model), so keep letters, digits, - and _ only.
+      - id: artifact
+        if: always()
+        run: echo "name=real-run-${AI//[^A-Za-z0-9_-]/-}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: real-run-${{ inputs.ai }}
+          name: ${{ steps.artifact.outputs.name }}
           path: |
             work/geo
             work/site
