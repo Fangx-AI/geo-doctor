@@ -1,7 +1,7 @@
 // Tests for cli/geo-studio.mjs. Run: npm test
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -266,4 +266,63 @@ test('studio: material in, facts extracted with quotes, written to the card as p
   assert.deepEqual([added.id, added.confirmed, added.status], ['P04', false, '待确认']);
   assert.equal((await call('/api/candidate/c99', { method: 'POST', body: { action: 'apply' } })).status, 404);
   assert.equal((await call('/api/candidate/c1', { method: 'POST', body: { action: 'delete' } })).status, 400);
+});
+
+test('studio: the distribution center formats, records links and serves the fill helper', async () => {
+  const d = project(); const { call, port } = await start(d);
+  mkdirSync(join(d, 'geo', 'drafts'));
+  const fm = (status, platforms) => `---\ntitle: 小鹿记账离线说明\nslug: offline-budget-app\nquestion: 有没有不用联网也能用的记账 App？\nqid: Q01\nlang: zh\nplatforms: [${platforms}]\nfacts: [B03, F01]\nbrand: 小鹿记账\ntags: [记账]\nstatus: ${status}\n---\n\n${BODY}\n`;
+  writeFileSync(join(d, 'geo', 'drafts', 'offline-budget-app.md'), fm('draft', 'site, zhihu, wechat'));
+
+  // Nothing leaves before approval. 通过审核之前什么都不交出去。
+  assert.equal((await call('/api/render/wechat/offline-budget-app.md')).status, 404);
+  assert.deepEqual((await call('/fill.json')).data.items, []);
+  writeFileSync(join(d, 'geo', 'drafts', 'offline-budget-app.md'), fm('confirmed', 'site, zhihu, wechat'));
+
+  const wx = await call('/api/render/wechat/offline-budget-app.md');
+  assert.equal(wx.status, 200);
+  assert.equal(wx.data.format, 'html');
+  assert.match(wx.data.text, /<h1 style=/);
+  // No original link until the article has a page; then the one the site log records. 有了页面才带原文链接。
+  writeFileSync(join(d, 'geo', 'autopilot.json'), JSON.stringify({ brand: '小鹿记账', ai: 'deepseek', baseUrl: 'https://facts.example/' }));
+  assert.doesNotMatch((await call('/api/render/wechat/offline-budget-app.md')).data.text, /facts\.example/);
+  appendFileSync(join(d, 'geo', 'published.csv'), 'date,slug,platform,url,status,title\n2026-10-20,offline-budget-app,site,https://blog.example/offline,publish,x\n');
+  assert.match((await call('/api/render/wechat/offline-budget-app.md')).data.text, /blog\.example\/offline/);
+  assert.equal((await call('/api/render/nope/offline-budget-app.md')).status, 400);
+
+  const items = (await call('/fill.json')).data.items;
+  assert.deepEqual(items.map((x) => x.key), ['zhihu/offline-budget-app']);
+  const js = (await call('/geo-fill.user.js')).data;
+  assert.match(js, new RegExp(`@match\\s+http://127\\.0\\.0\\.1:${port}/distribute\\.html\\*`));
+  assert.match(js, new RegExp(`"manifest":"http://127\\.0\\.0\\.1:${port}/fill\\.json"`));
+  assert.equal((await call('/distribute.html')).status, 200, 'the board address serves the app');
+
+  assert.equal((await call('/api/published', { method: 'POST', body: { slug: 'offline-budget-app', platform: 'zhihu', url: 'javascript:alert(1)' } })).status, 400);
+  assert.equal((await call('/api/published', { method: 'POST', body: { slug: 'offline-budget-app', platform: 'myspace', url: 'https://x.example/1' } })).status, 400);
+  assert.equal((await call('/api/published', { method: 'POST', body: { slug: 'nope', platform: 'zhihu', url: 'https://x.example/1' } })).status, 404);
+  assert.equal((await call('/api/published', { method: 'POST', body: { slug: 'offline-budget-app', platform: 'zhihu', url: 'https://zhuanlan.zhihu.com/p/1' } })).status, 200);
+  const s = (await call('/api/state')).data;
+  assert.deepEqual(s.published.map((r) => [r.platform, r.url, r.status]), [['site', 'https://blog.example/offline', 'publish'], ['zhihu', 'https://zhuanlan.zhihu.com/p/1', 'published']]);
+  assert.match(readFileSync(join(d, 'geo', 'published.csv'), 'utf8'), /^﻿?date,slug,platform,url,status,title/);
+  assert.deepEqual(s.drafts[0].platforms, ['site', 'zhihu', 'wechat']);
+  assert.deepEqual(s.channels.fill, ['zhihu', 'juejin']);
+  assert.equal(s.channels.devto.set, false);
+  assert.equal(s.helper, true);
+});
+
+test('studio: with a token the fill helper is not served', async () => {
+  const d = project(); const { call } = await start(d, { token: 'correct-horse-battery' });
+  assert.equal((await call('/fill.json')).status, 404);
+  assert.equal((await call('/geo-fill.user.js')).status, 404);
+  assert.equal((await call('/api/state', { headers: { 'x-geo-token': 'correct-horse-battery' } })).data.helper, false);
+});
+
+test('commandFor posts to dev.to and WordPress only with the settings they need', () => {
+  const d = project();
+  const dev = commandFor('devto', d, {}, 'zh');
+  assert.deepEqual(dev.argv.slice(0, 6), ['post', join(d, 'geo', 'drafts'), '--to', 'devto', '--status', 'publish']);
+  assert.throws(() => commandFor('wordpress', d, {}, 'zh'), /wordpress/);
+  const wp = commandFor('wordpress', d, { wordpress: { site: 'https://blog.example', user: 'me' } }, 'en');
+  assert.ok(wp.argv.includes('https://blog.example'));
+  assert.equal(wp.argv[wp.argv.indexOf('--status') + 1], 'draft', 'WordPress posts drafts unless told to publish');
 });
