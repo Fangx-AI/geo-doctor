@@ -723,10 +723,11 @@ function packDrafts(drafts, o, t, lang, logRows) {
 // and stops there: the person reviews and clicks publish. No login, no cookies, no clicking publish.
 // 浏览器填稿助手支持的编辑器：在你自己已登录的浏览器里填好标题和正文就停下，由你检查后点发布。不登录、不碰 Cookie、不替你点发布。
 export const FILL = {
-  zhihu: { match: ['https://zhuanlan.zhihu.com/write*', 'https://zhuanlan.zhihu.com/p/*/edit*'], format: 'html' },
-  juejin: { match: ['https://juejin.cn/editor/*'], format: 'md' },
+  // Editors, plus the article pages they land on after publishing (to record the link).
+  zhihu: { match: ['https://zhuanlan.zhihu.com/write*', 'https://zhuanlan.zhihu.com/p/*'], format: 'html' },
+  juejin: { match: ['https://juejin.cn/editor/*', 'https://juejin.cn/post/*', 'https://juejin.cn/published*'], format: 'md' },
 };
-export const FILL_VERSION = '1.0.0';
+export const FILL_VERSION = '1.1.0';
 
 // One item per draft and fill-able platform, rendered the same way pack renders it (original link included).
 export function fillItems(drafts, { urlFor = () => '' } = {}) {
@@ -747,21 +748,95 @@ export function fillJson(items) {
   return JSON.stringify({ generator: 'geo-publish', version: FILL_VERSION, items }, null, 2) + '\n';
 }
 
-// Runs inside the editor page (Tampermonkey / Violentmonkey). Kept free of outside references: it is serialised.
+// Runs in the person's browser (Tampermonkey / Violentmonkey). Kept free of outside references: it is serialised.
+// On the distribution board it shows each article's status and opens editors; on an editor it fills the title and
+// body; after the person clicks publish it records the article's link for the board. It never clicks publish.
 function fillHelper(cfg) {
-  const host = location.hostname;
+  const host = location.hostname; const path = location.pathname;
+  const get = (k, d) => { try { return JSON.parse(GM_getValue(k, JSON.stringify(d))); } catch (e) { return d; } };
+  const put = (k, v) => GM_setValue(k, JSON.stringify(v));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const today = () => new Date().toISOString().slice(0, 10);
+  if (window.top !== window.self) return;
+
+  // ------------------------------------------------ distribution board
+  if (location.href.split(/[?#]/)[0] === cfg.board) {
+    document.documentElement.setAttribute('data-geo-fill', cfg.version);
+    const paint = () => {
+      const pub = get('published', {}); const fil = get('filled', {});
+      document.querySelectorAll('[data-st]').forEach((el) => {
+        const k = el.getAttribute('data-st');
+        if (pub[k]) { el.innerHTML = `<a href="${esc(pub[k])}" target="_blank" rel="noopener">已发 ✓</a>`; el.setAttribute('data-state', 'done'); }
+        else if (fil[k]) { el.textContent = `已填好 ${fil[k]}，待你点发布`; el.setAttribute('data-state', 'filled'); }
+        else { el.textContent = '待发'; el.setAttribute('data-state', 'todo'); }
+      });
+    };
+    const want = (key) => { const q = get('want', []).filter((w) => Date.now() - w.at < 120000); q.push({ key, at: Date.now() }); put('want', q); };
+    document.addEventListener('click', (e) => {
+      const go = e.target.closest && e.target.closest('a.go[data-key]');
+      if (go) { want(go.getAttribute('data-key')); return; }
+      const all = e.target.closest && e.target.closest('[data-all]');
+      if (all) {
+        const pub = get('published', {});
+        const links = [...document.querySelectorAll(`a.go[data-platform="${all.getAttribute('data-all')}"]`)].filter((a) => !pub[a.getAttribute('data-key')]);
+        links.forEach((a, i) => setTimeout(() => { want(a.getAttribute('data-key')); GM_openInTab(a.href, { active: i === 0, insert: true }); }, i * 1500));
+        if (!links.length) alert('这个平台的文章都已经发过了。');
+        return;
+      }
+      const mark = e.target.closest && e.target.closest('[data-mark]');
+      if (mark) {
+        const k = mark.getAttribute('data-mark'); const pub = get('published', {});
+        const u = prompt('粘贴这篇文章发布后的链接（留空则取消「已发」标记）：', pub[k] || '');
+        if (u === null) return;
+        if (!u.trim()) delete pub[k]; else if (/^https?:\/\//.test(u.trim())) pub[k] = u.trim(); else return alert('链接要以 http 开头');
+        put('published', pub); paint();
+      }
+    });
+    paint();
+    window.addEventListener('focus', paint);
+    document.addEventListener('visibilitychange', paint);
+    return;
+  }
+
   const platform = /(^|\.)zhihu\.com$/.test(host) ? 'zhihu' : /(^|\.)juejin\.cn$/.test(host) ? 'juejin' : null;
-  if (!platform || window.top !== window.self) return;
+  if (!platform) return;
+  const isEditor = platform === 'zhihu' ? /^\/(write|p\/\d+\/edit)/.test(path) : /^\/editor\//.test(path);
+
+  // ------------------------------------------------ after publishing: remember the link for the board
+  const publishedUrl = () => {
+    const p = location.pathname;
+    if (platform === 'zhihu' && /^\/p\/\d+\/?$/.test(p)) return location.origin + p.replace(/\/$/, '');
+    if (platform === 'juejin') {
+      if (/^\/post\/\d+/.test(p)) return location.origin + p.match(/^\/post\/\d+/)[0];
+      if (/^\/published/.test(p)) { const a = document.querySelector('a[href*="/post/"]'); if (a && /\/post\/\d+/.test(a.href)) return a.href.match(/^https?:\/\/[^/]+\/post\/\d+/)[0]; }
+    }
+    return '';
+  };
+  const watch = () => {
+    const k = sessionStorage.getItem('geo-fill-pending'); if (!k) return false;
+    const u = publishedUrl(); if (!u) return false;
+    const pub = get('published', {}); pub[k] = u; put('published', pub);
+    sessionStorage.removeItem('geo-fill-pending');
+    toast(`GEO 医生：已记下发布链接 ${u}`);
+    return true;
+  };
+  function toast(text) {
+    const t = document.createElement('div'); t.textContent = text;
+    t.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:2147483647;background:#1f2328;color:#fff;padding:8px 14px;border-radius:8px;font:13px system-ui,sans-serif';
+    document.documentElement.appendChild(t); setTimeout(() => t.remove(), 6000);
+  }
+  if (!isEditor) { if (!watch()) setTimeout(watch, 2500); return; }
+  setInterval(watch, 1000); // single-page editors move to the article without reloading
+
+  // ------------------------------------------------ editor: fill title and body
   const SEL = {
     zhihu: { title: ['textarea[placeholder*="标题"]', 'input[placeholder*="标题"]'], body: ['.public-DraftEditor-content', '[contenteditable="true"]'] },
     juejin: { title: ['input.title-input', 'input[placeholder*="标题"]'], body: ['.bytemd-editor .CodeMirror', '.CodeMirror', '.bytemd-editor textarea'] },
   }[platform];
   const pageWin = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-  const get = (k, d) => { try { return JSON.parse(GM_getValue(k, JSON.stringify(d))); } catch (e) { return d; } };
-  const put = (k, v) => GM_setValue(k, JSON.stringify(v));
   const find = (list) => { for (const s of list) { const el = document.querySelector(s); if (el) return el; } return null; };
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  async function waitFind(list, ms = 8000) { for (let t = 0; t < ms; t += 250) { const el = find(list); if (el) return el; await sleep(250); } return null; }
+  async function waitFind(list, ms = 15000) { for (let t = 0; t < ms; t += 250) { const el = find(list); if (el) return el; await sleep(250); } return null; }
   const norm = (s) => String(s || '').replace(/\s+/g, '');
   const probe = (it) => norm(it.text).slice(0, 12);
 
@@ -789,14 +864,16 @@ function fillHelper(cfg) {
     return norm(el.textContent || el.value).includes(probe(it));
   }
   async function fill(it, say) {
+    say('正在填写…');
     const title = await waitFind(SEL.title);
     const body = await waitFind(SEL.body);
     if (title) setField(title, it.title);
     const ok = body ? await fillBody(body, it) : false;
     if (!ok) GM_setClipboard(it.body, it.format === 'html' ? 'html' : 'text');
-    const marks = get('filled', {}); marks[it.key] = new Date().toISOString().slice(0, 10); put('filled', marks);
+    const marks = get('filled', {}); marks[it.key] = today(); put('filled', marks);
+    sessionStorage.setItem('geo-fill-pending', it.key);
     say([title ? '✅ 标题已填' : '⚠️ 没找到标题框，请手动填标题', ok ? '✅ 正文已填' : '⚠️ 正文没能自动填入，已复制到剪贴板：点一下正文区，按 Ctrl+V（Mac 用 ⌘V）',
-      it.tags && it.tags.length ? `标签建议：${it.tags.join('、')}` : '', '请检查排版，确认无误后由你点「发布」。'].filter(Boolean).join('\n'));
+      it.tags && it.tags.length ? `标签建议：${it.tags.join('、')}` : '', '检查排版后由你点「发布」，发布后链接会自动记到分发台。'].filter(Boolean).join('\n'));
   }
 
   const root = document.createElement('div');
@@ -807,23 +884,37 @@ function fillHelper(cfg) {
     .h{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #eee;font-weight:600}
     .i{padding:8px 12px;border-bottom:1px solid #f2f2f2}.t{margin-bottom:4px}.m{color:#888;font-size:12px}
     button{font:inherit;cursor:pointer;border:1px solid #1772f6;background:#1772f6;color:#fff;border-radius:6px;padding:2px 10px}
-    button.x{background:none;border:none;color:#888;padding:0 4px}.msg{white-space:pre-wrap;padding:8px 12px;background:#f6f8fa}
+    button.x{background:none;border:none;color:#888;padding:0 4px}.msg{white-space:pre-wrap;padding:8px 12px;background:#f6f8fa}a{color:#1772f6}
     </style>
     <div class="p"><div class="h"><span>GEO 医生 · 填稿</span><button class="x" data-toggle>–</button></div><div class="b"><div class="msg">正在读取文章…</div></div></div>`;
   document.documentElement.appendChild(root);
   const box = sh.querySelector('.b');
   sh.querySelector('[data-toggle]').onclick = (e) => { box.hidden = !box.hidden; e.target.textContent = box.hidden ? '+' : '–'; };
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function render(items, note) {
-    const marks = get('filled', {});
+    const marks = get('filled', {}); const pub = get('published', {});
     box.innerHTML = (note ? `<div class="msg">${esc(note)}</div>` : '') + (items.length ? items.map((it, i) => `<div class="i"><div class="t">${esc(it.title)}</div>
-      <button data-i="${i}">${marks[it.key] ? '再填一次' : '填入'}</button> <span class="m">${marks[it.key] ? `已填过 ${esc(marks[it.key])}` : ''}</span></div>`).join('')
-      : '<div class="msg">没有给这个平台准备的文章。</div>');
+      <button data-i="${i}">${marks[it.key] ? '再填一次' : '填入'}</button> <span class="m">${pub[it.key] ? '已发 ✓' : marks[it.key] ? `已填过 ${esc(marks[it.key])}` : ''}</span></div>`).join('')
+      : '<div class="msg">没有给这个平台准备的文章。</div>') + `<div class="msg"><a href="${esc(cfg.board)}" target="_blank" rel="noopener">打开分发台</a></div>`;
     box.querySelectorAll('button[data-i]').forEach((b) => { b.onclick = () => fill(items[+b.dataset.i], (m) => render(items, m)); });
+  }
+  // Which article to fill: the #geo-fill=… link from the board, else the newest request the board queued for this platform.
+  function wanted() {
+    const h = (location.hash.match(/geo-fill=([^&]+)/) || [])[1];
+    if (h) return decodeURIComponent(h);
+    const q = get('want', []).filter((w) => Date.now() - w.at < 120000);
+    const i = q.findIndex((w) => w.key.startsWith(platform + '/'));
+    if (i < 0) return '';
+    const [w] = q.splice(i, 1); put('want', q); return w.key;
   }
   GM_xmlhttpRequest({
     method: 'GET', url: cfg.manifest + (cfg.manifest.includes('?') ? '&' : '?') + 't=' + Date.now(),
-    onload: (r) => { try { render((JSON.parse(r.responseText).items || []).filter((x) => x.platform === platform)); } catch (e) { render([], '文章列表读取失败：' + e.message); } },
+    onload: (r) => {
+      let items;
+      try { items = (JSON.parse(r.responseText).items || []).filter((x) => x.platform === platform); } catch (e) { return render([], '文章列表读取失败：' + e.message); }
+      render(items);
+      const key = wanted(); const it = key && items.find((x) => x.key === key);
+      if (it) fill(it, (m) => render(items, m));
+    },
     onerror: () => render([], '读不到文章列表：' + cfg.manifest),
   });
 }
@@ -831,14 +922,15 @@ function fillHelper(cfg) {
 export function fillUserscript({ manifestUrl, name = 'GEO' }) {
   const u = new URL(manifestUrl);
   const self = new URL('geo-fill.user.js', manifestUrl).href;
+  const board = new URL('distribute.html', manifestUrl).href;
   const meta = [
     ['name', `GEO 医生 · 填稿助手（${name}）`], ['namespace', `geo-doctor/${u.host}${u.pathname}`], ['version', FILL_VERSION],
-    ['description', '在你自己的浏览器里把已确认的文章填进知乎、掘金编辑器，由你检查后点发布。不登录、不代发。'],
-    ...Object.values(FILL).flatMap((f) => f.match.map((m) => ['match', m])),
-    ['grant', 'GM_xmlhttpRequest'], ['grant', 'GM_getValue'], ['grant', 'GM_setValue'], ['grant', 'GM_setClipboard'], ['grant', 'unsafeWindow'],
+    ['description', '分发台一键打开知乎、掘金编辑器并填好已确认的文章，由你检查后点发布，发布链接自动记回分发台。不登录、不代发。'],
+    ['match', `${board}*`], ...Object.values(FILL).flatMap((f) => f.match.map((m) => ['match', m])),
+    ['grant', 'GM_xmlhttpRequest'], ['grant', 'GM_getValue'], ['grant', 'GM_setValue'], ['grant', 'GM_setClipboard'], ['grant', 'GM_openInTab'], ['grant', 'unsafeWindow'],
     ['connect', u.hostname], ['downloadURL', self], ['updateURL', self], ['run-at', 'document-idle'],
   ];
-  return `// ==UserScript==\n${meta.map(([k, v]) => `// @${k.padEnd(12)} ${v}`).join('\n')}\n// ==/UserScript==\n// Generated by geo-doctor (https://github.com/Fangx-AI/geo-doctor). MIT.\n\n(${fillHelper.toString()})(${JSON.stringify({ manifest: manifestUrl })});\n`;
+  return `// ==UserScript==\n${meta.map(([k, v]) => `// @${k.padEnd(12)} ${v}`).join('\n')}\n// ==/UserScript==\n// Generated by geo-doctor (https://github.com/Fangx-AI/geo-doctor). MIT.\n\n(${fillHelper.toString()})(${JSON.stringify({ manifest: manifestUrl, board, version: FILL_VERSION })});\n`;
 }
 
 // ---------------------------------------------------------------- CLI

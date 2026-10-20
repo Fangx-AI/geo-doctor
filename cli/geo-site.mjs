@@ -15,7 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { articleHtml, checkDrafts, FILL, fillItems, fillJson, fillUserscript, loadDrafts, parseFacts, SITE } from './geo-publish.mjs';
+import { articleHtml, checkDrafts, FILL, fillItems, fillJson, fillUserscript, loadDrafts, parseFacts, PLATFORMS, SITE } from './geo-publish.mjs';
 
 export const VERSION = '1.0.0';
 const CONFIRMED = new Set(['已确认', 'confirmed', 'ok']);
@@ -439,9 +439,61 @@ export function buildSite(facts, { lang = 'zh', baseUrl = null, articles = [], f
     if (items.length) {
       files.push({ path: 'fill.json', text: fillJson(items) });
       files.push({ path: 'geo-fill.user.js', text: fillUserscript({ manifestUrl: joinUrl(baseUrl, 'fill.json'), name: siteModel(facts).name }) });
+      files.push({ path: 'distribute.html', text: distributeHtml(facts, [...new Set([...articles, ...fill])], items, { baseUrl }) });
     }
   }
   return files;
+}
+
+// The distribution board: every article and where it stands on each platform. Not for search engines.
+// The fill helper (geo-fill.user.js) runs on this page too: it shows what was filled and published, and opens editors.
+export function distributeHtml(facts, drafts, items, { baseUrl }) {
+  const plats = Object.keys(FILL).filter((p) => items.some((i) => i.platform === p));
+  const NAMES = { zhihu: '知乎', juejin: '掘金' };
+  const cell = (d, p) => {
+    const key = `${p}/${d.slug}`;
+    if (!items.some((i) => i.key === key)) return '<td class="na">—</td>';
+    const href = `${PLATFORMS[p].editor}#geo-fill=${encodeURIComponent(key)}`;
+    return `<td><span class="st" data-st="${esc(key)}">待发</span><br><a class="go" data-key="${esc(key)}" data-platform="${p}" href="${esc(href)}" target="_blank" rel="noopener">分发</a> <button class="mark helper" data-mark="${esc(key)}" title="手动填写或清除已发链接">改</button></td>`;
+  };
+  const rows = drafts.map((d) => {
+    const site = d.platforms.includes(SITE) ? `<td><a href="${esc(joinUrl(baseUrl, `articles/${d.slug}.html`))}">已发 ✓</a></td>` : '<td class="na">—</td>';
+    return `<tr><th scope="row">${esc(d.title)}</th>${site}${plats.map((p) => cell(d, p)).join('')}</tr>`;
+  }).join('\n');
+  const name = siteModel(facts).name;
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>${esc(name)} · 分发台</title>
+<style>${STYLE}body{max-width:1000px}table{border-collapse:collapse;width:100%;font-size:15px}th,td{border:1px solid #d0d7de;padding:8px 10px;text-align:left;vertical-align:top}thead th{background:#f6f8fa}td.na{color:#aaa}
+.st{font-size:13px;color:#9a6700}.st[data-state=done]{color:#1a7f37}.st[data-state=filled]{color:#0969da}
+.go,.bar button{display:inline-block;margin-top:4px;padding:2px 12px;border-radius:6px;background:#1772f6;color:#fff;text-decoration:none;border:0;font:inherit;font-size:14px;cursor:pointer}
+.mark{background:none;border:0;color:#57606a;cursor:pointer;font-size:12px}.helper{display:none}html[data-geo-fill] .helper{display:inline-block}
+.install{border:1px solid #d4a72c;background:#fff8c5;border-radius:8px;padding:12px 16px;margin:16px 0}html[data-geo-fill] .install{display:none}.bar{margin:16px 0}</style>
+</head>
+<body>
+<h1>${esc(name)} · 分发台</h1>
+<p>官网和有官方接口的平台（如 dev.to）由工作流自动发布。知乎、掘金这类平台不允许程序代发：点「分发」会打开编辑器并自动填好标题和正文，你检查后自己点「发布」，发布后的链接会自动记回这里。</p>
+<div class="install"><b>还没检测到填稿助手。</b>只需装一次：
+<ol><li>在 Chrome 或 Edge 安装浏览器扩展 <a href="https://www.tampermonkey.net/">Tampermonkey</a>。</li>
+<li>打开 <a href="${esc(joinUrl(baseUrl, 'geo-fill.user.js'))}">填稿助手</a>，点「安装」。</li>
+<li>Chrome 用户：打开 <code>chrome://extensions</code>，在 Tampermonkey 的「详细信息」里打开「允许用户脚本」（没有这个开关就打开右上角「开发者模式」）。</li>
+<li>刷新本页，这个黄框消失就装好了。</li></ol>
+没装助手时，「分发」也能打开编辑器，只是要自己粘贴。</div>
+<div class="bar helper">${plats.map((p) => `<button data-all="${p}">一键分发所有待发的${NAMES[p] || p}文章</button>`).join(' ')}</div>
+<table>
+<thead><tr><th>文章</th><th>官网</th>${plats.map((p) => `<th>${NAMES[p] || p}</th>`).join('')}</tr></thead>
+<tbody>
+${rows}
+</tbody>
+</table>
+<p><small>「已发」记录保存在你这台电脑的浏览器里。换电脑后可以点「改」手动补上链接。请先登录知乎、掘金再点分发。</small></p>
+</body>
+</html>
+`;
 }
 
 // ---------------------------------------------------------------- GitHub Pages workflow
