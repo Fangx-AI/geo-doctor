@@ -1,0 +1,362 @@
+{
+  "done": {
+    "README.md": "be9903ec372980e5"
+  },
+  "items": [
+    {
+      "cid": "c1",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "B03",
+      "section": "基本信息",
+      "fields": {
+        "项目": "一句话说明",
+        "内容": "让豆包、DeepSeek、ChatGPT、Claude 愿意推荐你的产品"
+      },
+      "quote": "让豆包、DeepSeek、ChatGPT、Claude 愿意推荐你的产品",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "开源的 GEO（生成式引擎优化）工具：查出 AI 推荐了哪些竞品、为什么不推荐你，按事实卡写 AI 愿意引用的内容，并用推荐率复查效果"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c2",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "N03",
+      "section": "不适合谁",
+      "fields": {
+        "内容": "本地门店"
+      },
+      "quote": "本地门店版本在路上。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "本地门店：目前只支持软件、App、网站、小程序和线上产品"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c3",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "F01",
+      "section": "核心能力",
+      "fields": {
+        "能力": "查 robots、AI 爬虫、noindex、正文能不能被读到"
+      },
+      "quote": "查 robots、AI 爬虫、noindex、正文能不能被读到",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "体检网站能不能被 AI 搜索读到：robots.txt、AI 爬虫、noindex、正文是否可见"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c4",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "F02",
+      "section": "核心能力",
+      "fields": {
+        "能力": "有 API Key 时也可以自动问 DeepSeek、千问、Kimi、豆包、ChatGPT 等，每条回答都存档"
+      },
+      "quote": "有 API Key 时也可以自动问 DeepSeek、千问、Kimi、豆包、ChatGPT 等，每条回答都存档",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "用 API 自动问 DeepSeek、通义千问、Kimi、豆包、元宝、ChatGPT、Perplexity、Gemini、Claude，统计谁被推荐"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c5",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "F04",
+      "section": "核心能力",
+      "fields": {
+        "能力": "一道缺口题一篇，只用事实卡里的事实"
+      },
+      "quote": "一道缺口题一篇，只用事实卡里的事实",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "只用事实卡里已确认的事实写稿，自动检查占位符、夸大词、未确认事实和重复稿"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c6",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "F05",
+      "section": "核心能力",
+      "fields": {
+        "能力": "用事实卡一键生成事实站，免费放到 GitHub Pages"
+      },
+      "quote": "用事实卡一键生成事实站，免费放到 GitHub Pages",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "用事实卡生成 AI 能读懂的事实站（事实页、常见问题、llms.txt、结构化数据），可免费放到 GitHub Pages"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c7",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "F06",
+      "section": "核心能力",
+      "fields": {
+        "能力": "每周一自动采样、给新缺口写稿、出疗效报告并开一个 PR"
+      },
+      "quote": "每周一自动采样、给新缺口写稿、出疗效报告并开一个 PR，你审完点合并就发布",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "每周自动复查：采样、给新缺口写稿、出疗效报告，并开一个 PR 给人审"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c8",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "F08",
+      "section": "核心能力",
+      "fields": {
+        "能力": "AI 会帮你摘事实填事实卡，每条都附原文",
+        "限制": "原文里找不到的直接丢掉"
+      },
+      "quote": "AI 会帮你摘事实填事实卡，每条都附原文，原文里找不到的直接丢掉",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "从官网和产品资料里抽事实，每条必须逐字引用原文，原文里找不到的直接丢弃"
+        },
+        {
+          "field": "限制",
+          "current": "抽出的事实是待确认状态，要人确认后才能用"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c9",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "P01",
+      "section": "价格",
+      "fields": {
+        "项目": "免费开源",
+        "内容": "免费开源"
+      },
+      "quote": "**免费开源** · **不用服务器** · **一句话安装** · **中英双语**",
+      "conflict": [
+        {
+          "field": "项目",
+          "current": "免费版或试用"
+        },
+        {
+          "field": "内容",
+          "current": "完全免费，MIT 开源许可；调用各家 AI 的 API 费用由你自己的账号支付"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c10",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "C01",
+      "section": "使用条件",
+      "fields": {
+        "项目": "支持平台",
+        "内容": "Claude Code、Codex、Kimi Code、WorkBuddy"
+      },
+      "quote": "在 Claude Code、Codex、Kimi Code、WorkBuddy 等能安装技能的 AI 助手里，新开一个对话，发送：",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "Claude Code、Codex、Kimi Code、支持上传技能包的 AI 客户端、Node.js 18 及以上的命令行"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c11",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "X01",
+      "section": "明确不支持",
+      "fields": {
+        "内容": "知乎、公众号、头条等打包成可直接粘贴的稿件，由你本人点发布"
+      },
+      "quote": "知乎、公众号、头条等打包成可直接粘贴的稿件，由你本人点发布",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "不会替你发布到知乎、公众号、小红书等第三方平台：只排好版，由你本人点发布"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c12",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "S01",
+      "section": "数据与安全",
+      "fields": {
+        "项目": "数据存储位置",
+        "内容": "数据就是 `geo/` 文件夹"
+      },
+      "quote": "不用装数据库，数据就是 `geo/` 文件夹；",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "所有数据都是你项目里 geo/ 文件夹的普通文件，没有数据库，不上传到 GEO 医生的服务器（GEO 医生没有服务器）"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c13",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "F02",
+      "section": "核心能力",
+      "fields": {
+        "限制": "API 回答不登录、多数不联网，和 App 里可能不一样。自动采样适合高频看趋势，重要结论用 App 里的人工采样确认。AI 每次回答都不一样，所以每题问 2 次，看出现率而不是单次排名"
+      },
+      "quote": "API 回答不登录、多数不联网，和 App 里可能不一样。自动采样适合高频看趋势，重要结论用 App 里的人工采样确认。AI 每次回答都不一样，所以每题问 2 次，看出现率而不是单次排名。",
+      "conflict": [
+        {
+          "field": "限制",
+          "current": "API 回答不登录、多数不联网，可能和 App 里不同；重要结论要在 App 里人工确认"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c14",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "F06",
+      "section": "核心能力",
+      "fields": {
+        "能力": "重新采样、找出竞品被推荐而你没有的题、只用已确认的事实给每道缺口写一篇稿、写疗效报告，最后开一个 PR 给你审"
+      },
+      "quote": "写一个每周一运行的工作流：重新采样、找出竞品被推荐而你没有的题、只用已确认的事实给每道缺口写一篇稿、写疗效报告，最后开一个 PR 给你审。",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "每周自动复查：采样、给新缺口写稿、出疗效报告，并开一个 PR 给人审"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c15",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "P01",
+      "section": "价格",
+      "fields": {
+        "内容": "skill 和体检脚本都是开源的（MIT），只消耗你自己 AI 助手的额度"
+      },
+      "quote": "不要。skill 和体检脚本都是开源的（MIT），只消耗你自己 AI 助手的额度。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "完全免费，MIT 开源许可；调用各家 AI 的 API 费用由你自己的账号支付"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c16",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "C01",
+      "section": "使用条件",
+      "fields": {
+        "内容": "WorkBuddy、Claude Code、Codex、Kimi Code 这类能装技能的助手"
+      },
+      "quote": "在 WorkBuddy、Claude Code、Codex、Kimi Code 这类能装技能的助手里做诊断，采样时再去豆包、DeepSeek 里问。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "Claude Code、Codex、Kimi Code、支持上传技能包的 AI 客户端、Node.js 18 及以上的命令行"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c17",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "C02",
+      "section": "使用条件",
+      "fields": {
+        "内容": "支持英文和海外 AI；用英文跟它说话，它就全程用英文，写出的内容也是英文"
+      },
+      "quote": "支持。你用英文跟它说话，它就全程用英文，写出的内容也是英文。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "中文、英文"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c18",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "X01",
+      "section": "明确不支持",
+      "fields": {
+        "内容": "知乎、公众号这些第三方平台只帮你排好版，由你本人用真实账号发"
+      },
+      "quote": "官网可以自动发；知乎、公众号这些第三方平台只帮你排好版，由你本人用真实账号发",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "不会替你发布到知乎、公众号、小红书等第三方平台：只排好版，由你本人点发布"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c19",
+      "status": "new",
+      "date": "2026-10-20",
+      "id": "S02",
+      "section": "数据与安全",
+      "fields": {
+        "内容": "体检脚本零依赖，只访问你给的网址和它的 robots.txt、sitemap.xml，不向第三方上传数据，不读密钥；请只体检自己的网站"
+      },
+      "quote": "体检脚本零依赖，只访问你给的网址和它的 robots.txt、sitemap.xml，不向第三方上传数据，不读密钥。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "API Key 和 WordPress 密码只从环境变量读取，不写进命令和文件"
+        }
+      ],
+      "source": "README.md"
+    }
+  ]
+}
