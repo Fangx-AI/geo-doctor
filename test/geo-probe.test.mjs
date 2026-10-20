@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseCsv, loadQuestions, parseBrands, judgeBrand, analyse, summarize, main } from '../cli/geo-probe.mjs';
+import { parseCsv, loadQuestions, parseBrands, judgeBrand, analyse, summarize, main, ask, PROVIDERS } from '../cli/geo-probe.mjs';
 
 const QUESTIONS = `id,类型,问题,判定标准,对应事实,优先级,来源类型,来源
 Q01,A 不带品牌的推荐,有没有不用联网也能用的记账 App？,提到并推荐我们,F01,核心,用户原话,客服记录
@@ -229,4 +229,15 @@ test('report: each batch is classified by its own question snapshot', () => {
   const [oldG, newG] = summarize(rows, new Map([['Q1', 'B']]), new Map([['old', new Map([['Q1', 'A']])]]));
   assert.deepEqual([oldG.recommend.of, oldG.correct.of], [1, 0]);
   assert.deepEqual([newG.recommend.of, newG.correct.of], [0, 1]);
+});
+
+test('ask: Qwen turns web search on; other providers get a plain request', async () => {
+  const bodies = [];
+  const reply = (json) => ({ ok: true, status: 200, json: async () => json });
+  const fetchImpl = async (u, init) => { bodies.push(JSON.parse(init.body)); return reply({ choices: [{ finish_reason: 'stop', message: { content: 'a' } }] }); };
+  await ask(PROVIDERS.qwen, { base: 'http://x', key: 'k', model: 'qwen-plus', question: 'q', maxTokens: 100, fetchImpl });
+  assert.equal(bodies[0].enable_search, true);
+  assert.deepEqual(bodies[0].search_options, { forced_search: true });
+  await ask(PROVIDERS.kimi, { base: 'http://x', key: 'k', model: 'kimi-latest', question: 'q', maxTokens: 100, fetchImpl });
+  assert.deepEqual(Object.keys(bodies[1]).sort(), ['max_tokens', 'messages', 'model']);
 });

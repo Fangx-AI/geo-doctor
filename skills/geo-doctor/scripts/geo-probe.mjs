@@ -23,7 +23,7 @@ export const VERSION = '1.0.0';
 // 默认都是 OpenAI 兼容接口。模型更新很快，可以用 --ai 名称:模型 指定。
 export const PROVIDERS = {
   deepseek: { label: 'DeepSeek', base: 'https://api.deepseek.com/v1', key: 'DEEPSEEK_API_KEY', model: 'deepseek-chat', keyUrl: 'https://platform.deepseek.com/api_keys' },
-  qwen: { label: '通义千问', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', key: 'DASHSCOPE_API_KEY', model: 'qwen-plus', keyUrl: 'https://bailian.console.aliyun.com/' },
+  qwen: { label: '通义千问', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', key: 'DASHSCOPE_API_KEY', model: 'qwen-plus', search: true, extra: { enable_search: true, search_options: { forced_search: true } }, keyUrl: 'https://bailian.console.aliyun.com/' },
   kimi: { label: 'Kimi', base: 'https://api.moonshot.cn/v1', key: 'MOONSHOT_API_KEY', model: 'kimi-latest', keyUrl: 'https://platform.moonshot.cn/console/api-keys' },
   doubao: { label: '豆包', base: 'https://ark.cn-beijing.volces.com/api/v3', key: 'ARK_API_KEY', model: null, keyUrl: 'https://console.volcengine.com/ark' },
   hunyuan: { label: '腾讯混元（元宝）', base: 'https://api.hunyuan.cloud.tencent.com/v1', key: 'HUNYUAN_API_KEY', model: 'hunyuan-turbos-latest', keyUrl: 'https://console.cloud.tencent.com/hunyuan/api-key' },
@@ -237,10 +237,11 @@ export async function ask(provider, { base, key, model, question, maxTokens, tim
       const sources = (data.content || []).flatMap((b) => (b.citations || []).map((c) => c.url)).filter(Boolean);
       return { text, sources, truncated: data.stop_reason === 'max_tokens', model: data.model || model };
     }
+    // Qwen searches the web through enable_search (extra); other providers get a plain chat request.
     res = await fetchImpl(`${base.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST', signal: ctl.signal,
       headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: question }] }),
+      body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: question }], ...(provider.extra || {}) }),
     });
     data = await res.json().catch(() => ({}));
     if (!res.ok) throw httpError(res.status, data);

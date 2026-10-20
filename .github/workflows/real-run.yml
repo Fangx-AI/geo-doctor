@@ -29,7 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      AI: ${{ inputs.ai || 'deepseek' }}
+      # Empty on the weekly schedule: then every AI whose key is set among deepseek, kimi and qwen is asked.
+      AI_INPUT: ${{ inputs.ai }}
       TIMES: ${{ inputs.times || '2' }}
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
@@ -45,17 +46,31 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Pick the AIs
+        run: |
+          keyvar() { node -e "import('./cli/geo-probe.mjs').then(m => { const p = m.PROVIDERS[process.argv[1].split(':')[0].toLowerCase()]; console.log(p && p.key || '') })" "$1"; }
+          AI="$AI_INPUT"
+          if [ -z "$AI" ]; then
+            for a in deepseek kimi qwen; do V=$(keyvar "$a"); if [ -n "${!V:-}" ]; then AI="${AI:+$AI,}$a"; fi; done
+            AI="${AI:-deepseek}"
+          fi
+          for a in ${AI//,/ }; do
+            VAR=$(keyvar "$a")
+            if [ -z "$VAR" ]; then echo "Unknown AI: $a" | tee -a "$GITHUB_STEP_SUMMARY"; exit 1; fi
+            if [ -z "${!VAR:-}" ]; then
+              printf '## 缺少 API Key / Missing API key\n\n请在仓库 Settings → Secrets and variables → Actions 里添加 `%s`，再重新运行。\n\nAdd the `%s` repository secret and run again.\n' "$VAR" "$VAR" >> "$GITHUB_STEP_SUMMARY"
+              echo "::error title=Missing API key::Add the $VAR repository secret and run again."
+              exit 1
+            fi
+          done
+          echo "AI=$AI" >> "$GITHUB_ENV"
+          echo "::notice title=AIs::$AI"
       - name: Run the loop on real APIs
         run: |
           set -u
           S="$GITHUB_STEP_SUMMARY"
-          VAR=$(node -e "import('./cli/geo-probe.mjs').then(m => { const p = m.PROVIDERS[process.argv[1].split(':')[0].toLowerCase()]; console.log(p && p.key || '') })" "$AI")
-          if [ -z "$VAR" ]; then echo "Unknown AI: $AI" | tee -a "$S"; exit 1; fi
-          if [ -z "${!VAR:-}" ]; then
-            printf '## 缺少 API Key / Missing API key\n\n请在仓库 Settings → Secrets and variables → Actions 里添加 `%s`，再重新运行。\n\nAdd the `%s` repository secret and run again.\n' "$VAR" "$VAR" >> "$S"
-            echo "::error title=Missing API key::Add the $VAR repository secret and run again."
-            exit 1
-          fi
+          # Sampling asks every chosen AI; fact extraction and drafting use the first one.
+          GEN_AI="${AI%%,*}"
           cp -r examples/geo-doctor work
           mkdir -p work/geo/sources && cp README.md work/geo/sources/README.md
           # Carry earlier answers forward from the latest saved run, so the report shows the trend across weeks.
@@ -83,12 +98,12 @@ jobs:
             if [ "$code" != 0 ]; then echo "::error title=$title (exit $code)::$msg"; else echo "::notice title=$title::$msg"; fi
             return $code
           }
-          printf '# GEO 医生真实全流程 · %s · %s\n\n> 真实 API 调用，原样输出，没有修饰。API 回答不登录、多数不联网，和 App 里可能不同。\n\n' "$AI" "$(date -u +%Y-%m-%d)" >> "$S"
+          printf '# GEO 医生真实全流程 · %s · %s\n\n> 真实 API 调用，原样输出，没有修饰。API 回答不登录；通义千问开了联网搜索，DeepSeek、Kimi 不联网；和 App 里可能不同。\n\n' "$AI" "$(date -u +%Y-%m-%d)" >> "$S"
           step "1 采样 geo-probe" node ../cli/geo-probe.mjs run geo/questions.csv --ai "$AI" --brand "$BRAND" --competitors "$COMP" --times "$TIMES" --runs geo/runs.csv --lang zh || FAILED="$FAILED probe"
           step "2 找缺口 geo-autopilot gaps" node ../cli/geo-autopilot.mjs gaps --lang zh || FAILED="$FAILED gaps"
-          step "3 从 README 抽事实 geo-facts extract" node ../cli/geo-facts.mjs extract --ai "$AI" --facts geo/fact-card.yaml --lang zh || FAILED="$FAILED facts"
+          step "3 从 README 抽事实 geo-facts extract" node ../cli/geo-facts.mjs extract --ai "$GEN_AI" --facts geo/fact-card.yaml --lang zh || FAILED="$FAILED facts"
           step "3b 候选事实" node ../cli/geo-facts.mjs list --lang zh || true
-          step "4 写稿 geo-autopilot write" node ../cli/geo-autopilot.mjs write --ai "$AI" --brand "GEO 医生" --max 1 --lang zh || FAILED="$FAILED write"
+          step "4 写稿 geo-autopilot write" node ../cli/geo-autopilot.mjs write --ai "$GEN_AI" --brand "GEO 医生" --max 1 --lang zh || FAILED="$FAILED write"
           if [ -d geo/drafts ]; then
             step "5 检查草稿 geo-publish check" node ../cli/geo-publish.mjs check geo/drafts --lang zh || FAILED="$FAILED check"
             for f in geo/drafts/*.md; do printf '#### 草稿全文 %s\n\n```markdown\n%s\n```\n\n' "$f" "$(head -c 12000 "$f")" >> "$S"; done
