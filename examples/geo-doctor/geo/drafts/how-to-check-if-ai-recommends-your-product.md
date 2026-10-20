@@ -9,7 +9,7 @@ platforms: [site, zhihu, juejin]
 tags: [GEO, AI搜索, DeepSeek, 豆包]
 facts: [B01, B02, B03, B04, B05, U01, U02, N01, N02, N03, F01, F02, F03, F04, F05, F06, F07, F08, P01, C01, C02, X01, X02, S01, S02, D01, E01]
 brand: GEO 医生
-status: draft
+status: confirmed
 generated_by: geo-autopilot deepseek, 2026-10-20；维护者改过两句
 ---
 

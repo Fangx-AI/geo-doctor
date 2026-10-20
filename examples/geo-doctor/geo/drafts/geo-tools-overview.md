@@ -9,7 +9,8 @@ platforms: [site, zhihu, juejin]
 facts: [B01, B02, B03, B04, B05, F01, F02, F03, F04, F05, F06, P01, N01, N02, X02, D01]
 brand: GEO 医生
 tags: [GEO, 生成式引擎优化, AI搜索, 工具推荐]
-status: draft
+generated_by: 人工撰写（Claude 起草，维护者审核），2026-10-20
+status: confirmed
 ---
 
 GEO（生成式引擎优化）工具按用途大致分三类：**监测 AI 推荐谁**、**批量生产内容**、**检查网站能不能被 AI 读到**。先想清楚你缺哪一环，再挑工具。开源免费的 GEO 医生（geo-doctor）覆盖的是监测、找缺口、按事实写稿和可读性体检，不做大批量内容生产。
