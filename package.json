@@ -1,7 +1,7 @@
 {
   "name": "geo-doctor",
-  "version": "1.5.0",
-  "description": "GEO toolkit: audit whether AI search (ChatGPT, Perplexity, Claude, Google AI, Doubao…) can read your page, sample AI answers through their APIs to count who gets recommended, batch-check and publish fact-based articles, build an AI-readable fact site from your fact card, and run the whole loop weekly (sample, draft for the gaps, report) as a pull request for review. Part of geo-doctor (GEO 医生).",
+  "version": "1.6.0",
+  "description": "GEO toolkit: audit whether AI search (ChatGPT, Perplexity, Claude, Google AI, Doubao…) can read your page, sample AI answers through their APIs to count who gets recommended, batch-check and publish fact-based articles, build an AI-readable fact site from your fact card, and run the whole loop weekly (sample, draft for the gaps, report) as a pull request for review. A local web console (geo-studio) puts the loop in the browser. Part of geo-doctor (GEO 医生).",
   "type": "module",
   "bin": {
     "geo-doctor": "cli/geo-audit.mjs",
@@ -9,7 +9,8 @@
     "geo-publish": "cli/geo-publish.mjs",
     "geo-probe": "cli/geo-probe.mjs",
     "geo-site": "cli/geo-site.mjs",
-    "geo-autopilot": "cli/geo-autopilot.mjs"
+    "geo-autopilot": "cli/geo-autopilot.mjs",
+    "geo-studio": "cli/geo-studio.mjs"
   },
   "files": [
     "cli/geo-audit.mjs",
@@ -17,6 +18,9 @@
     "cli/geo-probe.mjs",
     "cli/geo-site.mjs",
     "cli/geo-autopilot.mjs",
+    "cli/geo-studio.mjs",
+    "skills/geo-doctor/assets/fact-card.yaml",
+    "skills/geo-doctor/assets/questions.csv",
     "LICENSE-docs.md"
   ],
   "engines": {
