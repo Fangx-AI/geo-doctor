@@ -17,6 +17,10 @@ on:
 # write: results are also committed to the real-run-results branch, so they can be read and compared later.
 permissions:
   contents: write
+# One run at a time, so two runs never race to push the results branch.
+concurrency:
+  group: real-run
+  cancel-in-progress: false
 jobs:
   run:
     runs-on: ubuntu-latest
