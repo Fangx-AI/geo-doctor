@@ -1,0 +1,89 @@
+name: real-run
+# Runs the whole loop once against a real AI API, on the example project in examples/geo-doctor
+# (GEO Doctor as its own first patient): sample, find gaps, extract facts from README.md,
+# draft one article, check it, report and build the fact site. Output goes to the run summary
+# and an artifact. Manual only; it needs the chosen AI's key as a repository secret.
+# 用真实 API 把全流程跑一遍（拿 GEO 医生自己当病人）：采样、找缺口、从 README 抽事实、写一篇稿、
+# 检查、出报告、生成事实站。结果在运行摘要和附件里。只能手动触发，需要在仓库 Secrets 里加对应的 API Key。
+on:
+  workflow_dispatch:
+    inputs:
+      ai:
+        description: 'AI to use: deepseek, qwen, kimi, hunyuan, openai, perplexity, gemini, claude (optionally name:model)'
+        default: deepseek
+      times:
+        description: 'How many times to ask each question'
+        default: '1'
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AI: ${{ inputs.ai }}
+      TIMES: ${{ inputs.times }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+      MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+      ARK_API_KEY: ${{ secrets.ARK_API_KEY }}
+      HUNYUAN_API_KEY: ${{ secrets.HUNYUAN_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run the loop on real APIs
+        run: |
+          set -u
+          S="$GITHUB_STEP_SUMMARY"
+          VAR=$(node -e "import('./cli/geo-probe.mjs').then(m => { const p = m.PROVIDERS[process.argv[1].split(':')[0].toLowerCase()]; console.log(p && p.key || '') })" "$AI")
+          if [ -z "$VAR" ]; then echo "Unknown AI: $AI" | tee -a "$S"; exit 1; fi
+          if [ -z "${!VAR:-}" ]; then
+            printf '## 缺少 API Key / Missing API key\n\n请在仓库 Settings → Secrets and variables → Actions 里添加 `%s`，再重新运行。\n\nAdd the `%s` repository secret and run again.\n' "$VAR" "$VAR" >> "$S"
+            exit 1
+          fi
+          cp -r examples/geo-doctor work
+          mkdir -p work/geo/sources && cp README.md work/geo/sources/README.md
+          cd work
+          BRAND=$(node -p "require('./geo/autopilot.json').brand")
+          COMP=$(node -p "require('./geo/autopilot.json').competitors")
+          FAILED=""
+          step() {
+            local title="$1"; shift
+            echo "::group::$title"
+            local out code
+            out=$("$@" 2>&1); code=$?
+            echo "$out"
+            echo "::endgroup::"
+            printf '### %s · exit %s\n\n```\n%s\n```\n\n' "$title" "$code" "$(echo "$out" | head -c 20000)" >> "$S"
+            return $code
+          }
+          printf '# GEO 医生真实全流程 · %s · %s\n\n> 真实 API 调用，原样输出，没有修饰。API 回答不登录、多数不联网，和 App 里可能不同。\n\n' "$AI" "$(date -u +%Y-%m-%d)" >> "$S"
+          step "1 采样 geo-probe" node ../cli/geo-probe.mjs run geo/questions.csv --ai "$AI" --brand "$BRAND" --competitors "$COMP" --times "$TIMES" --runs geo/runs.csv --lang zh || FAILED="$FAILED probe"
+          step "2 找缺口 geo-autopilot gaps" node ../cli/geo-autopilot.mjs gaps --lang zh || FAILED="$FAILED gaps"
+          step "3 从 README 抽事实 geo-facts extract" node ../cli/geo-facts.mjs extract --ai "$AI" --facts geo/fact-card.yaml --lang zh || FAILED="$FAILED facts"
+          step "3b 候选事实" node ../cli/geo-facts.mjs list --lang zh || true
+          step "4 写稿 geo-autopilot write" node ../cli/geo-autopilot.mjs write --ai "$AI" --brand "GEO 医生" --max 1 --lang zh || FAILED="$FAILED write"
+          if [ -d geo/drafts ]; then
+            step "5 检查草稿 geo-publish check" node ../cli/geo-publish.mjs check geo/drafts --lang zh || true
+            for f in geo/drafts/*.md; do printf '#### 草稿全文 %s\n\n```markdown\n%s\n```\n\n' "$f" "$(head -c 12000 "$f")" >> "$S"; done
+          fi
+          step "6 报告 geo-autopilot report" node ../cli/geo-autopilot.mjs report --out geo/reports/real-run.md --lang zh || FAILED="$FAILED report"
+          cat geo/reports/real-run.md >> "$S" 2>/dev/null || true
+          DRAFTS=(); [ -d geo/drafts ] && DRAFTS=(--drafts geo/drafts)
+          step "7 事实站 geo-site build" node ../cli/geo-site.mjs build --facts geo/fact-card.yaml "${DRAFTS[@]}" --out site || FAILED="$FAILED site"
+          if [ -n "$FAILED" ]; then printf '\n**失败的步骤 / Failed steps:**%s\n' "$FAILED" >> "$S"; exit 1; fi
+          printf '\n**全部步骤成功 / All steps passed.**\n' >> "$S"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-run-${{ inputs.ai }}
+          path: |
+            work/geo
+            work/site
+          if-no-files-found: ignore

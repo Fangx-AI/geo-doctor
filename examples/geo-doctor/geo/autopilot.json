@@ -1,0 +1,10 @@
+{
+  "brand": "GEO 医生,geo-doctor,GEO Doctor",
+  "competitors": "GEOFlow,Otterly,Profound,Peec AI",
+  "ai": "deepseek",
+  "times": 2,
+  "writer": "deepseek",
+  "maxDrafts": 2,
+  "autoConfirm": false,
+  "lang": "zh"
+}
