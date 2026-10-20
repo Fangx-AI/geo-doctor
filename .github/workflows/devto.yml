@@ -1,8 +1,8 @@
 name: devto
 # Posts GEO Doctor's own confirmed English articles to dev.to through its official API whenever they change on
-# the default branch. Needs the DEVTO_API_KEY repository secret (https://dev.to/settings/extensions); without it
+# the default branch. Needs the DEVTO_API_KEY (or DEV) repository secret (https://dev.to/settings/extensions); without it
 # the run only says what to add. Articles with the same title are updated, never posted twice.
-# 默认分支上的英文文章有改动时，用 dev.to 官方接口自动发布；需要仓库 Secret DEVTO_API_KEY。同标题只更新，不重复发。
+# 默认分支上的英文文章有改动时，用 dev.to 官方接口自动发布；需要仓库 Secret DEVTO_API_KEY（也认 DEV）。同标题只更新，不重复发。
 on:
   push:
     branches: [master]
@@ -17,7 +17,7 @@ jobs:
   post:
     runs-on: ubuntu-latest
     env:
-      DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+      DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY || secrets.DEV }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
