@@ -762,13 +762,14 @@ function fillHelper(cfg) {
   // ------------------------------------------------ distribution board
   if (location.href.split(/[?#]/)[0] === cfg.board) {
     document.documentElement.setAttribute('data-geo-fill', cfg.version);
+    const L = document.body.dataset; // the board's own wording, so English boards stay English
     const paint = () => {
       const pub = get('published', {}); const fil = get('filled', {});
       document.querySelectorAll('[data-st]').forEach((el) => {
         const k = el.getAttribute('data-st');
-        if (pub[k]) { el.innerHTML = `<a href="${esc(pub[k])}" target="_blank" rel="noopener">已发 ✓</a>`; el.setAttribute('data-state', 'done'); }
-        else if (fil[k]) { el.textContent = `已填好 ${fil[k]}，待你点发布`; el.setAttribute('data-state', 'filled'); }
-        else { el.textContent = '待发'; el.setAttribute('data-state', 'todo'); }
+        if (pub[k]) { el.innerHTML = `<a href="${esc(pub[k])}" target="_blank" rel="noopener">${esc(L.lDone || '已发 ✓')}</a>`; el.setAttribute('data-state', 'done'); }
+        else if (fil[k]) { el.textContent = (L.lFilled || '已填好 {d}，待你点发布').replace('{d}', fil[k]); el.setAttribute('data-state', 'filled'); }
+        else { el.textContent = L.lTodo || '待发'; el.setAttribute('data-state', 'todo'); }
       });
     };
     const want = (key) => { const q = get('want', []).filter((w) => Date.now() - w.at < 120000); q.push({ key, at: Date.now() }); put('want', q); };
@@ -780,7 +781,7 @@ function fillHelper(cfg) {
         const pub = get('published', {});
         const links = [...document.querySelectorAll(`a.go[data-platform="${all.getAttribute('data-all')}"]`)].filter((a) => !pub[a.getAttribute('data-key')]);
         links.forEach((a, i) => setTimeout(() => { want(a.getAttribute('data-key')); GM_openInTab(a.href, { active: i === 0, insert: true }); }, i * 1500));
-        if (!links.length) alert('这个平台的文章都已经发过了。');
+        if (!links.length) alert(L.lNone || '这个平台的文章都已经发过了。');
         return;
       }
       const mark = e.target.closest && e.target.closest('[data-mark]');
@@ -803,18 +804,28 @@ function fillHelper(cfg) {
   const isEditor = platform === 'zhihu' ? /^\/(write|p\/\d+\/edit)/.test(path) : /^\/editor\//.test(path);
 
   // ------------------------------------------------ after publishing: remember the link for the board
-  const publishedUrl = () => {
+  // Only a page that shows the filled article's own title counts, and only within a few hours of filling it,
+  // so abandoning a draft and reading some other article never marks the draft as published.
+  const squash = (s) => String(s || '').replace(/\s+/g, '');
+  const showsTitle = (title) => [document.title, ...[...document.querySelectorAll('h1')].map((h) => h.textContent)].some((t) => squash(t).includes(squash(title)));
+  const publishedUrl = (title) => {
     const p = location.pathname;
-    if (platform === 'zhihu' && /^\/p\/\d+\/?$/.test(p)) return location.origin + p.replace(/\/$/, '');
+    if (platform === 'zhihu' && /^\/p\/\d+\/?$/.test(p)) return showsTitle(title) ? location.origin + p.replace(/\/$/, '') : '';
     if (platform === 'juejin') {
-      if (/^\/post\/\d+/.test(p)) return location.origin + p.match(/^\/post\/\d+/)[0];
-      if (/^\/published/.test(p)) { const a = document.querySelector('a[href*="/post/"]'); if (a && /\/post\/\d+/.test(a.href)) return a.href.match(/^https?:\/\/[^/]+\/post\/\d+/)[0]; }
+      if (/^\/post\/\d+/.test(p)) return showsTitle(title) ? location.origin + p.match(/^\/post\/\d+/)[0] : '';
+      if (/^\/published/.test(p)) {
+        const a = [...document.querySelectorAll('a[href*="/post/"]')].find((x) => /\/post\/\d+/.test(x.href) && squash(x.textContent).includes(squash(title)));
+        if (a) return a.href.match(/^https?:\/\/[^/]+\/post\/\d+/)[0];
+      }
     }
     return '';
   };
   const watch = () => {
-    const k = sessionStorage.getItem('geo-fill-pending'); if (!k) return false;
-    const u = publishedUrl(); if (!u) return false;
+    let pend; try { pend = JSON.parse(sessionStorage.getItem('geo-fill-pending') || 'null'); } catch (e) { pend = null; }
+    if (!pend || !pend.key) return false;
+    if (Date.now() - pend.at > 6 * 3600 * 1000) { sessionStorage.removeItem('geo-fill-pending'); return false; }
+    const u = publishedUrl(pend.title); if (!u) return false;
+    const k = pend.key;
     const pub = get('published', {}); pub[k] = u; put('published', pub);
     sessionStorage.removeItem('geo-fill-pending');
     toast(`GEO 医生：已记下发布链接 ${u}`);
@@ -825,7 +836,7 @@ function fillHelper(cfg) {
     t.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:2147483647;background:#1f2328;color:#fff;padding:8px 14px;border-radius:8px;font:13px system-ui,sans-serif';
     document.documentElement.appendChild(t); setTimeout(() => t.remove(), 6000);
   }
-  if (!isEditor) { if (!watch()) setTimeout(watch, 2500); return; }
+  if (!isEditor) { let n = 0; const t = setInterval(() => { if (watch() || ++n > 10) clearInterval(t); }, 1000); return; }
   setInterval(watch, 1000); // single-page editors move to the article without reloading
 
   // ------------------------------------------------ editor: fill title and body
@@ -871,7 +882,7 @@ function fillHelper(cfg) {
     const ok = body ? await fillBody(body, it) : false;
     if (!ok) GM_setClipboard(it.body, it.format === 'html' ? 'html' : 'text');
     const marks = get('filled', {}); marks[it.key] = today(); put('filled', marks);
-    sessionStorage.setItem('geo-fill-pending', it.key);
+    sessionStorage.setItem('geo-fill-pending', JSON.stringify({ key: it.key, title: it.title, at: Date.now() }));
     say([title ? '✅ 标题已填' : '⚠️ 没找到标题框，请手动填标题', ok ? '✅ 正文已填' : '⚠️ 正文没能自动填入，已复制到剪贴板：点一下正文区，按 Ctrl+V（Mac 用 ⌘V）',
       it.tags && it.tags.length ? `标签建议：${it.tags.join('、')}` : '', '检查排版后由你点「发布」，发布后链接会自动记到分发台。'].filter(Boolean).join('\n'));
   }
@@ -900,8 +911,13 @@ function fillHelper(cfg) {
   // Which article to fill: the #geo-fill=… link from the board, else the newest request the board queued for this platform.
   function wanted() {
     const h = (location.hash.match(/geo-fill=([^&]+)/) || [])[1];
-    if (h) return decodeURIComponent(h);
     const q = get('want', []).filter((w) => Date.now() - w.at < 120000);
+    if (h) {
+      // The board also queued this key (in case the site drops the #…); take it off the queue so a later blank editor stays blank.
+      const key = decodeURIComponent(h); const j = q.findIndex((w) => w.key === key);
+      if (j >= 0) { q.splice(j, 1); put('want', q); }
+      return key;
+    }
     const i = q.findIndex((w) => w.key.startsWith(platform + '/'));
     if (i < 0) return '';
     const [w] = q.splice(i, 1); put('want', q); return w.key;

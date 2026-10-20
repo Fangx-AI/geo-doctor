@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
-import { parseFactCard, loadFacts, siteModel, faqItems, structuredData, buildSite, llmsTxt, workflowYaml, parseArgs, main } from '../cli/geo-site.mjs';
+import { parseFactCard, loadFacts, siteModel, faqItems, structuredData, buildSite, llmsTxt, workflowYaml, parseArgs, main, distributeHtml } from '../cli/geo-site.mjs';
 import { audit } from '../cli/geo-audit.mjs';
 
 const CARD = `# 事实卡
@@ -269,6 +269,11 @@ test('build: drafts for Zhihu or Juejin also get fill.json and the browser fill 
   assert.match(board, /data-st="juejin\/offline"/);
   assert.match(board, /href="https:\/\/x\.example\/b\/articles\/offline\.html">已发/);
   assert.ok(!readFileSync(join(out, 'sitemap.xml'), 'utf8').includes('distribute'), 'the board stays out of the sitemap');
+  const facts = loadFacts(parseFactCard(CARD));
+  const en = distributeHtml(facts, [], [{ key: 'zhihu/x', platform: 'zhihu' }], { baseUrl: 'https://x.example/', lang: 'en' });
+  assert.match(en, /<html lang="en">/);
+  assert.match(en, /Distribution board/);
+  assert.doesNotMatch(en, /分发台|待发/);
   assert.equal(await main(['build', '--facts', join(d, 'geo', 'fact-card.yaml'), '--drafts', join(d, 'geo', 'drafts'), '--out', out], quiet()), 0);
   assert.ok(!existsSync(join(out, 'geo-fill.user.js')), 'no helper without a base URL to read the list from');
   assert.ok(!existsSync(join(out, 'distribute.html')));
