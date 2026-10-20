@@ -15,8 +15,6 @@ status: confirmed
 
 A small team can do GEO (generative engine optimization) without a server: run the work from an AI assistant or the command line on your own machine, host the fact site on free GitHub Pages, and let GitHub Actions run the weekly re-check. The free, open-source GEO Doctor (geo-doctor) is built that way: no server, no database.
 
-Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
-
 ## 1. List the questions people ask AI
 
 Write about ten questions in your users' words, in three kinds: recommendation questions that do not name you ("Is there a budgeting app that works offline?"), fact questions about you ("Is that app free?"), and cases you do not fit, to see whether AI wrongly suggests you.
@@ -44,6 +42,8 @@ With the project on GitHub and an API key set, GEO Doctor samples weekly, drafts
 Free and MIT-licensed; only the AI API calls cost money, on your own account. Works with Claude Code, Codex, Kimi Code, AI clients that accept skill packages, and Node.js 18+, plus a local web console with a button for each step. Data is plain files in geo/; API keys come only from environment variables.
 
 Source: https://github.com/Fangx-AI/geo-doctor
+
+Disclosure: I maintain GEO Doctor, and this article was drafted with AI assistance (Claude) and reviewed by me.
 
 ## Fact check
 
