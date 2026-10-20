@@ -100,6 +100,8 @@ geo-publish log --slug offline-budget-app --platform zhihu --url https://zhuanla
 
 **知乎、掘金：分发台 + 浏览器填稿助手，一个页面集中分发。** 用 `geo-site build --base-url …` 生成事实站时，草稿 `platforms` 里写了 `zhihu` 或 `juejin` 的，会多生成三个文件：`distribute.html`（分发台，不进搜索引擎）、`fill.json`（文章列表）和 `geo-fill.user.js`（油猴脚本）。用户只需装一次 [Tampermonkey](https://www.tampermonkey.net/) 或 Violentmonkey，再打开 `<事实站网址>/geo-fill.user.js` 点安装（Chrome 还要在扩展详情里打开「允许用户脚本」）。之后打开 `<事实站网址>/distribute.html`：每篇文章在官网、知乎、掘金的状态一目了然；点「分发」或「一键分发所有待发的知乎文章」，浏览器会打开编辑器并自动填好标题和正文，用户检查排版后自己点「发布」，发布后的文章链接自动记回分发台。正文填不进去时会自动复制到剪贴板，按 Ctrl+V 即可。它不登录、不读 Cookie、不点发布；「已发」记录存在用户自己的浏览器里，换电脑可以在分发台手动补链接。
 
+**在工作台里一站式分发。** 本地工作台（`geo-studio`）的「分发中心」把上面这些放在一个页面：文章 × 渠道一张表，每格显示已发布、待发布或未选此渠道。官网点「生成」（事实站）或「发到 WordPress」；dev.to 设好 `DEVTO_API_KEY` 后点「发布」；知乎、掘金用同一个填稿助手，在工作台点「安装助手」装一次即可（这份助手从本机工作台读文章，不用先部署事实站），点「填好并打开」或「一键打开全部」，发布后链接自动写进 `geo/published.csv`；公众号、头条号、百家号等点「复制排版」，到后台粘贴发布，再点「记录链接」。WordPress 在 `geo/autopilot.json` 里写 `"wordpress": { "site": "https://…", "user": "…", "status": "draft" }`，应用密码只从环境变量 `GEO_WP_APP_PASSWORD` 读取。设了访问口令（`GEO_STUDIO_TOKEN`）时不提供填稿助手，用「复制排版」。
+
 不能运行命令时，按同样的分工手动做：官网的页面内容给用户或网站管理员，第三方平台的稿件按平台整理好给用户复制。
 
 ## 第三方内容：真实地争取，不能自己编
