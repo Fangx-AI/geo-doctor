@@ -158,6 +158,8 @@ export function readState(dir, { env = process.env, lang = 'zh' } = {}) {
           id: e.id, section: e.section, confirmed: e.confirmed, status: text(e.status) || '',
           label: first(e.item, e.capability, e.name, e.audience, e.scenario, e.against, e.type),
           detail: first(e.value, e.limit, e.price, e.diff, e.includes, e.url, e.source),
+          // Has content beyond labels (项目, 类型) and bookkeeping (来源, 状态). 除标签和来源外有实际内容。
+          filled: Object.entries(e.raw).some(([k, v]) => !/^(编号|id|来源|source|状态|status|项目|item|field|类型|type)$/i.test(k) && text(v) !== ''),
         })),
       };
     } catch (e) { errors.facts = e.message; }
@@ -320,7 +322,7 @@ export function createStudio({ dir = '.', lang = 'zh', env = process.env, token 
       const { confirmed } = await readBody(req);
       // An empty entry cannot be confirmed: it would let drafts cite a fact that says nothing. 空条目不能确认。
       const entry = readState(dir, { env, lang }).facts?.entries.find((e) => e.id === route[1]);
-      if (confirmed && entry && !entry.detail) return send(res, 422, { error: 'empty fact' });
+      if (confirmed && entry && !entry.filled) return send(res, 422, { error: 'empty fact' });
       const next = setFactStatus(read(p.facts), route[1], !!confirmed);
       if (next === null) return send(res, 404, { error: 'fact not found' });
       writeFileSync(p.facts, next);
@@ -680,7 +682,7 @@ const views = {
   facts() {
     const rows = (S.facts ? S.facts.entries : []).map((e) => [e.id, h('span', { class: 'muted' }, e.section), e.label ? h('span', {}, h('b', {}, e.label), ' ', e.detail) : e.detail,
       pill(e.confirmed ? 'ok' : 'warn', e.status || '—'),
-      h('button', { class: 'btn', disabled: !e.confirmed && !e.detail ? true : null, title: !e.confirmed && !e.detail ? T.emptyFact : null, onclick: async () => { try { await call('fact/' + encodeURIComponent(e.id), 'POST', { confirmed: !e.confirmed }); await load(); } catch (x) { fail(x); } } }, e.confirmed ? T.unconfirm : T.confirm)]);
+      h('button', { class: 'btn', disabled: !e.confirmed && !e.filled ? true : null, title: !e.confirmed && !e.filled ? T.emptyFact : null, onclick: async () => { try { await call('fact/' + encodeURIComponent(e.id), 'POST', { confirmed: !e.confirmed }); await load(); } catch (x) { fail(x); } } }, e.confirmed ? T.unconfirm : T.confirm)]);
     return [h('section', {}, rows.length ? table([T.id, T.section, T.fact, T.status, ''], rows) : h('p', { class: 'muted' }, S.errors.facts || '—')), editor('facts')];
   },
   questions() {

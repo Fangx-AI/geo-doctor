@@ -150,6 +150,8 @@ test('studio: page, state, the weekly loop, review and fact confirmation end to 
   assert.equal((await call('/api/fact/Z99', { method: 'POST', body: { confirmed: true } })).status, 404);
   writeFileSync(join(d, 'geo', 'fact-card.yaml'), readFileSync(join(d, 'geo', 'fact-card.yaml'), 'utf8') + '公开证据:\n  - 编号: E01\n    类型: ""\n    地址: ""\n    状态: 未知\n');
   assert.equal((await call('/api/fact/E01', { method: 'POST', body: { confirmed: true } })).status, 422, 'an empty entry cannot be confirmed');
+  writeFileSync(join(d, 'geo', 'fact-card.yaml'), readFileSync(join(d, 'geo', 'fact-card.yaml'), 'utf8') + '能力补充:\n  - 编号: G01\n    能力: "导出 CSV"\n    限制: ""\n    状态: 未知\n');
+  assert.equal((await call('/api/fact/G01', { method: 'POST', body: { confirmed: true } })).status, 200, 'a capability with no limit is still a fact');
 
   const site = await call('/api/run', { method: 'POST', body: { cmd: 'site' } });
   assert.equal(site.data.code, 0, site.data.err);

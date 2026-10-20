@@ -55,7 +55,7 @@ API Key 只从环境变量读取（例如 DEEPSEEK_API_KEY），不要写在命�
     skipped: (n) => `${n} 份资料没改过，跳过（--force 强制重抽）`,
     reading: (name, n) => `读取 ${name}，分 ${n} 段`,
     chunkFailed: (name, i, m) => `${name} 第 ${i} 段失败：${m}`,
-    result: (r) => `新候选 ${r.added} 条；丢弃：原文里找不到 ${r.dropped.noQuote} 条，格式不对 ${r.dropped.invalid} 条，和事实卡重复 ${r.dropped.same} 条。`,
+    result: (r) => `新候选 ${r.added} 条；丢弃：原文里找不到 ${r.dropped.noQuote} 条，内容和原文对不上 ${r.dropped.unsupported} 条，格式不对 ${r.dropped.invalid} 条，和事实卡重复 ${r.dropped.same} 条。`,
     next: '在工作台「资料」页逐条看，或运行 geo-facts list / apply。',
     none: '没有待处理的候选。',
     line: (c) => `${c.cid}  ${c.id || '新增'}  ${c.section}  ${fieldText(c.fields)}\n    原文：「${c.quote}」（${c.source}）${c.conflict.length ? `\n    和事实卡不同：${c.conflict.map((x) => `${x.field} 现在是「${x.current}」`).join('；')}` : ''}${c.status !== 'new' ? `  [${c.status === 'applied' ? '已写入' : '已忽略'}]` : ''}`,
@@ -91,7 +91,7 @@ API keys are read from environment variables only (for example OPENAI_API_KEY).`
     skipped: (n) => `${n} unchanged source(s) skipped (--force to extract again)`,
     reading: (name, n) => `Reading ${name} in ${n} part(s)`,
     chunkFailed: (name, i, m) => `${name} part ${i} failed: ${m}`,
-    result: (r) => `${r.added} new candidate(s); dropped: ${r.dropped.noQuote} not found in the material, ${r.dropped.invalid} malformed, ${r.dropped.same} already in the fact card.`,
+    result: (r) => `${r.added} new candidate(s); dropped: ${r.dropped.noQuote} not found in the material, ${r.dropped.unsupported} not supported by their quote, ${r.dropped.invalid} malformed, ${r.dropped.same} already in the fact card.`,
     next: 'Review them on Studio\'s Material page, or run geo-facts list / apply.',
     none: 'No candidates waiting.',
     line: (c) => `${c.cid}  ${c.id || 'new'}  ${c.section}  ${fieldText(c.fields)}\n    Quote: "${c.quote}" (${c.source})${c.conflict.length ? `\n    Differs from the fact card: ${c.conflict.map((x) => `${x.field} is now "${x.current}"`).join('; ')}` : ''}${c.status !== 'new' ? `  [${c.status}]` : ''}`,
@@ -155,12 +155,34 @@ export function splitChunks(text, size = CHUNK) {
   return out;
 }
 
-// Quotes are compared without spaces, punctuation or width differences, so line wrapping and full-width marks
-// do not cause false rejections, but an invented sentence still fails. 比较时忽略空格、标点和全半角。
-const norm = (s) => String(s || '').normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
+// Quotes are compared without spaces, sentence punctuation, quote marks, brackets or width differences, so line
+// wrapping and full-width marks do not cause false rejections. Symbols that can change a fact stay: currency signs,
+// %, /, +, - and a decimal point between digits, so $19.9 and $199 never match.
+// 比较时忽略空格、句读、引号、括号和全半角；货币符号、%、/、+、- 和数字间的小数点保留，$19.9 和 $199 不会被当成一样。
+const norm = (s) => String(s || '').normalize('NFKC').toLowerCase()
+  .replace(/(\d),(?=\d{3}\b)/g, '$1')
+  .replace(/(?<!\d)\.|\.(?!\d)/g, '')
+  .replace(/[\s,;:!?'"`~()[\]{}<>，。、；：？！“”‘’「」『』（）【】《》〈〉…—–·]/g, '');
 export function quoteFound(quote, text) {
   const q = norm(quote);
   return q.length >= 4 && norm(text).includes(q);
+}
+
+// A value must come from its quote: every number in it appears in the quote, and at least a third of its
+// two-character pieces (or words) do too. A paraphrase that shares nothing with the quote is dropped.
+// 值必须出自引用的原文：数字都要在原文里，至少三分之一的字词也要在原文里；和原文毫不相干的改写会被丢弃。
+const LATIN = /[a-z0-9$¥€£%/+.-]+/g;
+const pieces = (s) => String(s || '').normalize('NFKC').toLowerCase().split(/[\s,;:!?'"`~()[\]{}<>，。、；：？！“”‘’「」『』（）【】《》〈〉…—–·]+/)
+  .map(norm).filter(Boolean).flatMap((seg) => [
+    ...(seg.match(LATIN) || []),
+    ...seg.replace(LATIN, ' ').split(' ').filter(Boolean).flatMap((w) => (w.length < 2 ? [w] : Array.from({ length: w.length - 1 }, (_, i) => w.slice(i, i + 2)))),
+  ]);
+export function valueSupported(value, quote) {
+  const q = norm(quote);
+  for (const n of norm(value).match(/\d+(?:\.\d+)?/g) || []) if (!q.includes(n)) return false;
+  const p = pieces(value);
+  if (!p.length) return false;
+  return p.filter((x) => q.includes(x)).length / p.length >= 0.3;
 }
 
 // ---------------------------------------------------------------- the model
@@ -179,7 +201,7 @@ Current entries (empty ones can be filled):
 ${ent}
 
 Output a JSON array. Each element: {"id": "an existing id to fill, or NEW", "section": "section name", "fields": {"field": "value"}, "quote": "one sentence from the material that states this fact, copied word for word"}
-Use the field names above. Keep values short and factual. If there is nothing to extract, output []. Output JSON only.
+Use the field names above. Keep values short and factual, in the material's own words; numbers exactly as written. If there is nothing to extract, output []. Output JSON only.
 
 Material (from ${source}):
 <<<
@@ -195,7 +217,7 @@ ${sec}
 ${ent}
 
 输出一个 JSON 数组，每个元素：{"id": "要填的已有编号，新条目写 NEW", "section": "分区名", "fields": {"字段": "值"}, "quote": "资料里写着这条事实的那一句，逐字照抄"}
-字段名用上面列出的。值要短、只写事实。没有可摘的就输出 []。只输出 JSON。
+字段名用上面列出的。值要短、只写事实，尽量用资料里的原话，数字照抄。没有可摘的就输出 []。只输出 JSON。
 
 资料（来自 ${source}）：
 <<<
@@ -228,6 +250,11 @@ export function checkCandidate(raw, shape, material) {
   for (const [k, v] of Object.entries(raw.fields)) { const val = str(v); if (allowed.has(k) && val) fields[k] = val.replace(/\s+/g, ' '); }
   if (!Object.keys(fields).length) return { drop: 'invalid' };
   // Label-like fields (项目, 类型…) only name an existing slot; filling needs a real value. 只有标签没有内容不算。
+  // Only values the quote supports count; a label already in the card (项目: 名称) needs no support.
+  for (const [k, v] of Object.entries(fields)) {
+    if (entry && norm(entry.fields[k] || '') === norm(v)) continue;
+    if (!valueSupported(v, quote)) return { drop: 'unsupported' };
+  }
   const conflict = [];
   if (entry) {
     let news = 0;
@@ -264,7 +291,7 @@ async function askRetry(p, args, sleep) {
 export async function extractFacts({ sources, cardText, ai, lang = 'zh', fetchImpl = fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), out = () => {}, err = () => {} }) {
   const t = M[lang];
   const shape = cardShape(cardText);
-  const found = []; const dropped = { noQuote: 0, invalid: 0, same: 0 }; let failed = 0;
+  const found = []; const dropped = { noQuote: 0, unsupported: 0, invalid: 0, same: 0 }; let failed = 0;
   for (const src of sources) {
     const chunks = splitChunks(src.text);
     out(t.reading(src.name, chunks.length));
@@ -380,17 +407,18 @@ export function applyCandidate(src, c) {
   if (!c.id && !blank) return addEntry(src, section, c.fields, { sourceText, zh });
   const id = c.id || blank.id;
   const current = section.entries.find((e) => e.id === id)?.fields || {};
-  let text = src;
+  let text = src; let disagree = false;
   for (const [k, v] of Object.entries(c.fields)) {
     const cur = current[k] || '';
     if (norm(cur) === norm(v)) continue;
+    if (cur) disagree = true;
     // Both sayings stay in the card until a person picks one. 两种说法都留着，由人来选。
     const value = cur ? (zh ? `${v}（另一说法：${cur}）` : `${v} (other source: ${cur})`) : v;
     text = setEntryField(text, id, k, yq(value)); if (text === null) return null;
   }
   text = setEntryField(text, id, zh ? '来源' : 'source', yq(sourceText));
-  // A value that disagrees with what the card said becomes a conflict for a person to settle. 和原值冲突时标"来源冲突"。
-  const status = c.conflict && c.conflict.length ? (zh ? '来源冲突' : 'conflict') : (zh ? '待确认' : 'pending');
+  // Judged against the card as it is now, not as it was at extraction. 按写入时的事实卡判断冲突。
+  const status = disagree ? (zh ? '来源冲突' : 'conflict') : (zh ? '待确认' : 'pending');
   text = setEntryField(text, id, zh ? '状态' : 'status', status);
   return { text, id };
 }

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { cardShape, quoteFound, checkCandidate, applyCandidate, parseCandidates, splitChunks, setEntryField, readSource, extractPrompt, main } from '../cli/geo-facts.mjs';
+import { cardShape, quoteFound, valueSupported, checkCandidate, applyCandidate, parseCandidates, splitChunks, setEntryField, readSource, extractPrompt, main } from '../cli/geo-facts.mjs';
 import { parseFactCard, loadFacts } from '../cli/geo-site.mjs';
 
 const TEMPLATE = readFileSync(new URL('../skills/geo-doctor/assets/fact-card.yaml', import.meta.url), 'utf8');
@@ -36,6 +36,21 @@ test('quoteFound ignores spacing, punctuation and full-width forms but not inven
   assert.ok(!quoteFound('高级版每年 12 元', MATERIAL));
   assert.ok(!quoteFound('小鹿', MATERIAL), 'too short to prove anything');
   assert.ok(!quoteFound('', MATERIAL));
+  assert.ok(!quoteFound('Plan costs $199/month', 'Plan costs $19.9/month'), 'a decimal point is part of the fact');
+  assert.ok(!quoteFound('每年 18%', '每年 18 元'));
+  assert.ok(quoteFound('售价 1000 元', '售价 1,000 元'));
+});
+
+test('valueSupported: numbers must match and the value must share words with its quote', () => {
+  assert.ok(valueSupported('离线记账', '不联网也能用的个人记账 App'));
+  assert.ok(valueSupported('iOS、Android', '支持 iOS 和 Android'));
+  assert.ok(valueSupported('¥18/年', '高级版每年 18 元'));
+  assert.ok(!valueSupported('实时云同步', '本产品完全离线使用'), 'a real quote cannot carry an invented value');
+  assert.ok(!valueSupported('¥12/年', '高级版每年 18 元'), 'numbers must appear in the quote');
+  assert.ok(!valueSupported('', 'x'));
+  const shape = cardShape(TEMPLATE);
+  assert.equal(checkCandidate({ id: 'NEW', section: '核心能力', fields: { 能力: '实时云同步' }, quote: '数据只存在你的手机里' }, shape, MATERIAL).drop, 'unsupported');
+  assert.ok(checkCandidate({ id: 'B01', section: '基本信息', fields: { 项目: '名称', 内容: '小鹿记账' }, quote: '小鹿记账是一款' }, shape, MATERIAL).candidate, 'an unchanged label needs no support');
 });
 
 test('checkCandidate keeps quoted facts and drops invented, malformed and duplicate ones', () => {
@@ -71,6 +86,15 @@ test('applyCandidate fills empty entries, uses blank template slots, adds ids, a
   assert.deepEqual([get('B01').value, get('B01').status], ['小鹿记账 Pro（另一说法：小鹿记账）', '来源冲突']);
   assert.ok(!e.some((x) => x.confirmed), 'nothing is confirmed without a person');
   assert.equal(text.indexOf('- 编号: F02') < text.indexOf('价格:'), true, 'new entries stay inside their section');
+});
+
+test('applyCandidate judges conflicts against the card at write time', () => {
+  // Two candidates extracted for the same blank entry: the second disagrees with what the first wrote.
+  let text = TEMPLATE;
+  text = applyCandidate(text, { id: 'B06', section: '基本信息', fields: { 内容: '甲公司' }, quote: 'q', source: 'a.md', conflict: [] }).text;
+  text = applyCandidate(text, { id: 'B06', section: '基本信息', fields: { 内容: '乙公司' }, quote: 'q', source: 'b.md', conflict: [] }).text;
+  const b06 = facts(text).find((e) => e.id === 'B06');
+  assert.deepEqual([b06.value, b06.status], ['乙公司（另一说法：甲公司）', '来源冲突']);
 });
 
 test('setEntryField drops an indented block list and keeps quotes safe', () => {
@@ -121,6 +145,7 @@ const REPLY = JSON.stringify([
   { id: 'NEW', section: '明确不支持', fields: { 内容: '多人共享账本' }, quote: '小鹿记账不支持多人共享账本。' },
   { id: 'NEW', section: '核心能力', fields: { 能力: '云同步' }, quote: '支持实时云同步' },
   { id: 'B03', section: '基本信息', fields: { 项目: '一句话说明' }, quote: '小鹿记账是一款不联网也能用的个人记账 App' },
+  { id: 'NEW', section: '核心能力', fields: { 能力: '实时云同步' }, quote: '数据只存在你的手机里' },
 ]);
 
 async function run(dir, argv, opts = {}) {
@@ -140,7 +165,7 @@ test('CLI: extract keeps only quoted facts, skips unchanged material, then apply
   const m = fakeModel(REPLY);
   const r = await run(d, ['extract', '--ai', 'deepseek'], { fetchImpl: m.fetchImpl });
   assert.equal(r.code, 0, r.err);
-  assert.match(r.out, /新候选 2 条；丢弃：原文里找不到 1 条，格式不对 0 条，和事实卡重复 1 条/);
+  assert.match(r.out, /新候选 2 条；丢弃：原文里找不到 1 条，内容和原文对不上 1 条，格式不对 0 条，和事实卡重复 1 条/);
   assert.equal(m.calls.length, 1);
   assert.match(m.calls[0], /资料（来自 产品说明\.md）/);
   const saved = JSON.parse(readFileSync(join(d, 'geo', 'fact-candidates.json'), 'utf8'));
