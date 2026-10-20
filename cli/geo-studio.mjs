@@ -16,13 +16,14 @@
 
 import { createServer } from 'node:http';
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { PROVIDERS, parseCsv, loadQuestions, summarize, main as probeMain } from './geo-probe.mjs';
 import { checkDrafts, loadDrafts, parseFacts, main as publishMain } from './geo-publish.mjs';
 import { parseFactCard, loadFacts, main as siteMain } from './geo-site.mjs';
 import { findGaps, loadSnapshots, configTemplate, main as autopilotMain } from './geo-autopilot.mjs';
+import { applyCandidate, loadCandidates, saveCandidates, readSource, listSourceFiles, main as factsMain } from './geo-facts.mjs';
 
 export const VERSION = '1.0.0';
 const LOOPBACK = new Set(['127.0.0.1', '::1', 'localhost']);
@@ -78,6 +79,7 @@ export function paths(dir) {
   return {
     geo, questions: join(geo, 'questions.csv'), facts: join(geo, 'fact-card.yaml'), config: join(geo, 'autopilot.json'),
     runs: join(geo, 'runs.csv'), drafts: join(geo, 'drafts'), reports: join(geo, 'reports'), site: join(dir, 'site'),
+    sources: join(geo, 'sources'), candidates: join(geo, 'fact-candidates.json'),
   };
 }
 const read = (f) => readFileSync(f, 'utf8');
@@ -85,6 +87,12 @@ const text = (v) => (Array.isArray(v) ? v.join('、') : String(v ?? '').trim());
 const first = (...vals) => text(vals.find((v) => (Array.isArray(v) ? v.length : v !== undefined && v !== null && String(v).trim() !== '')));
 const DRAFT_FILE = /^[\w一-鿿][\w.一-鿿-]*\.md$/;
 const REPORT_FILE = /^[\w.-]+\.md$/;
+const SOURCE_FILE = /^[\w\u4e00-\u9fff][\w.\u4e00-\u9fff-]*\.(md|markdown|txt|html?)$/i;
+// A readable file name for pasted or fetched material. 给粘贴或抓取的资料起个文件名。
+export function sourceFileName(name, ext = 'txt') {
+  const base = String(name || '').replace(/^https?:\/\//i, '').replace(/\.(md|markdown|txt|html?)$/i, '').replace(/[^\w\u4e00-\u9fff-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'material';
+  return `${base}.${ext}`;
+}
 
 // Sets one fact's status in the fact card text, keeping everything else as written. Returns null if the id is not there.
 // 只改一条事实的状态，其余原样保留；找不到编号时返回 null。
@@ -150,6 +158,8 @@ export function readState(dir, { env = process.env, lang = 'zh' } = {}) {
           id: e.id, section: e.section, confirmed: e.confirmed, status: text(e.status) || '',
           label: first(e.item, e.capability, e.name, e.audience, e.scenario, e.against, e.type),
           detail: first(e.value, e.limit, e.price, e.diff, e.includes, e.url, e.source),
+          // Has content beyond labels (项目, 类型) and bookkeeping (来源, 状态). 除标签和来源外有实际内容。
+          filled: Object.entries(e.raw).some(([k, v]) => !/^(编号|id|来源|source|状态|status|项目|item|field|类型|type)$/i.test(k) && text(v) !== ''),
         })),
       };
     } catch (e) { errors.facts = e.message; }
@@ -188,11 +198,17 @@ export function readState(dir, { env = process.env, lang = 'zh' } = {}) {
   }
 
   const reports = existsSync(p.reports) ? readdirSync(p.reports).filter((f) => REPORT_FILE.test(f)).sort().reverse() : [];
+  const sources = listSourceFiles(p.sources).map((f) => {
+    const head = read(f).slice(0, 300).match(/^(?:来源|source)\s*[:：]\s*(\S+)/i);
+    return { file: basename(f), from: head ? head[1] : '' };
+  });
+  let candidates = [];
+  try { candidates = loadCandidates(p.candidates).items; } catch (e) { errors.candidates = e.message; }
   const keys = Object.entries(PROVIDERS).filter(([, v]) => v.key).map(([id, v]) => ({ id, label: v.label, env: v.key, set: !!env[v.key], url: v.keyUrl || '' }));
   return {
     version: VERSION, dir: resolve(dir), lang, files, errors, config, keys,
     questions: questions.map((q) => ({ id: q.id, cls: q.cls, question: q.question, priority: priority.get(q.id) || '' })),
-    facts, drafts, trend, gaps, batches, reports,
+    facts, drafts, trend, gaps, batches, reports, sources, candidates,
     templates: existsSync(join(TEMPLATES, 'fact-card.yaml')),
   };
 }
@@ -217,6 +233,11 @@ export function commandFor(cmd, dir, config, lang) {
     case 'report': return { run: autopilotMain, argv: ['report', '--lang', lang], cwd: true };
     case 'weekly': need('brand', 'ai'); return { run: autopilotMain, argv: ['weekly', '--lang', lang], cwd: true };
     case 'check': return { run: publishMain, argv: ['check', p.drafts, '--lang', lang] };
+    case 'facts': {
+      const ai = String(c.writer || String(c.ai || '').split(',')[0]).trim();
+      if (!ai) need('ai');
+      return { run: factsMain, argv: ['extract', '--ai', ai, '--lang', lang], cwd: true };
+    }
     case 'site':
       return { run: siteMain, argv: ['build', '--facts', p.facts, ...(existsSync(p.drafts) ? ['--drafts', p.drafts] : []), '--out', p.site,
         ...(c.baseUrl ? ['--base-url', String(c.baseUrl)] : [])] };
@@ -299,6 +320,9 @@ export function createStudio({ dir = '.', lang = 'zh', env = process.env, token 
     if (route[0] === 'fact' && route[1] && m === 'POST') {
       if (!existsSync(p.facts)) return send(res, 404, { error: 'no fact card' });
       const { confirmed } = await readBody(req);
+      // An empty entry cannot be confirmed: it would let drafts cite a fact that says nothing. 空条目不能确认。
+      const entry = readState(dir, { env, lang }).facts?.entries.find((e) => e.id === route[1]);
+      if (confirmed && entry && !entry.filled) return send(res, 422, { error: 'empty fact' });
       const next = setFactStatus(read(p.facts), route[1], !!confirmed);
       if (next === null) return send(res, 404, { error: 'fact not found' });
       writeFileSync(p.facts, next);
@@ -343,6 +367,52 @@ export function createStudio({ dir = '.', lang = 'zh', env = process.env, token 
       return send(res, r.status, r.body);
     }
 
+    if (route[0] === 'source' && m === 'POST') {
+      // Pasted text, an uploaded file's text, or a page fetched here. 粘贴的文字、上传的文件，或在这里抓取的网页。
+      const b = await readBody(req);
+      let name; let body;
+      if (typeof b.url === 'string' && /^https?:\/\//i.test(b.url)) {
+        try { const s = await readSource(b.url, { fetchImpl }); name = sourceFileName(b.url); body = `来源: ${b.url}\n${s.text}\n`; } catch (e) { return send(res, 502, { error: e.message }); }
+      } else if (typeof b.text === 'string' && b.text.trim()) {
+        const ext = /\.html?$/i.test(String(b.name || '')) ? 'html' : /\.(md|markdown)$/i.test(String(b.name || '')) ? 'md' : 'txt';
+        name = sourceFileName(b.name || b.text.slice(0, 20), ext); body = b.text;
+      } else return send(res, 400, { error: 'url or text expected' });
+      mkdirSync(p.sources, { recursive: true });
+      let file = name; for (let i = 2; existsSync(join(p.sources, file)); i++) file = name.replace(/(\.\w+)$/, `-${i}$1`);
+      writeFileSync(join(p.sources, file), body);
+      return send(res, 200, { ok: true, file });
+    }
+    if (route[0] === 'source' && route[1] && m === 'DELETE') {
+      if (!SOURCE_FILE.test(route[1]) || basename(route[1]) !== route[1]) return send(res, 400, { error: 'bad file name' });
+      const f = join(p.sources, route[1]);
+      if (!existsSync(f)) return send(res, 404, { error: 'not found' });
+      rmSync(f); return send(res, 200, { ok: true });
+    }
+
+    if (route[0] === 'candidate' && route[1] && m === 'POST') {
+      const { action } = await readBody(req);
+      if (!['apply', 'ignore'].includes(action)) return send(res, 400, { error: 'action must be apply or ignore' });
+      if (busy) return send(res, 409, { error: busy });
+      const data = loadCandidates(p.candidates);
+      const list = route[1] === 'all' ? data.items.filter((c) => c.status === 'new') : data.items.filter((c) => c.cid === route[1]);
+      if (!list.length) return send(res, 404, { error: 'not found' });
+      if (action === 'apply') {
+        if (!existsSync(p.facts)) return send(res, 404, { error: 'no fact card' });
+        let text = read(p.facts); const done = [];
+        for (const c of list) {
+          if (c.status === 'applied') continue;
+          const r = applyCandidate(text, c);
+          if (!r) continue;
+          text = r.text; c.status = 'applied'; c.appliedAs = r.id; done.push(r.id);
+        }
+        writeFileSync(p.facts, text); saveCandidates(p.candidates, data);
+        return send(res, 200, { ok: true, ids: done });
+      }
+      for (const c of list) c.status = 'ignored';
+      saveCandidates(p.candidates, data);
+      return send(res, 200, { ok: true });
+    }
+
     if (route[0] === 'init' && m === 'POST') {
       // Starts a project from the bundled templates; never overwrites. 用模板开一个新项目，已有文件不覆盖。
       mkdirSync(p.geo, { recursive: true }); const wrote = [];
@@ -378,43 +448,51 @@ export function createStudio({ dir = '.', lang = 'zh', env = process.env, token 
 
 const UI = {
   zh: {
-    core: '核心', title: 'GEO 医生工作台', tabs: { overview: '总览', gaps: '缺口', drafts: '草稿', facts: '事实卡', questions: '问题集', run: '运行', reports: '报告' },
+    core: '核心', title: 'GEO 医生工作台', tabs: { overview: '总览', gaps: '缺口', drafts: '草稿', sources: '资料', facts: '事实卡', questions: '问题集', run: '运行', reports: '报告' },
     confirmedFacts: '已确认事实', questions: '问题', toReview: '待审草稿', approved: '已通过草稿', gaps: '缺口题',
     nextSteps: '下一步', trend: '推荐率趋势（A 类题，次数）', noRuns: '还没有采样记录。在「运行」里点「采样」，或按第 4 步手动采样后记到 geo/runs.csv。',
     platform: '平台', batch: '批次', date: '日期', recommend: '推荐你', mention: '提到你', top: '推荐最多的', sources: 'AI 引用的来源',
     noGaps: '最近一批采样里没有缺口。', writeGaps: '为缺口写稿', youOf: '你被推荐 {0}/{1} 次', draftExists: '已有草稿',
     noDraft: '还没有草稿', save: '保存', approve: '通过', sendBack: '退回草稿', saved: '已保存', approvedMsg: '已通过', backMsg: '已退回为草稿',
     status: '状态', issues: '检查结果', noIssues: '检查没有问题', pick: '从左边选一篇', qid: '题', from: '写稿模型',
-    confirm: '确认', unconfirm: '取消确认', editRaw: '直接编辑文件', section: '分区', fact: '内容', id: '编号',
+    emptyFact: '这条还没有内容，先填写再确认', confirm: '确认', unconfirm: '取消确认', editRaw: '直接编辑文件', section: '分区', fact: '内容', id: '编号',
     cls: '类型', priority: '优先级', question: '问题',
-    runs: { probe: ['采样', '用 API 把问题集问一遍，结果追加到 geo/runs.csv'], write: ['写稿', '给还没有草稿的缺口题写稿，只用已确认事实'],
+    src: { add: '放入资料', intro: '把官网、价格页、帮助文档、产品说明放进来。AI 只摘资料里明确写着的事实，每条都附原文；原文里找不到的直接丢弃。写进事实卡后是"待确认"，你确认了才会被用来写稿。',
+      url: '网页地址', fetch: '抓取网页', name: '名称（可选）', paste: '或者粘贴文字', save: '保存资料', file: '或者选一个 .md / .txt / .html 文件',
+      list: '已有资料', none: '还没有资料。', extract: '让 AI 抽事实', cands: '候选事实', noCands: '没有待处理的候选。', fill: '填入', addTo: '新增到', quote: '原文',
+      conflict: '和事实卡不同：', apply: '写入事实卡', ignore: '忽略', applyAll: '全部写入', applied: '已写入事实卡，请到「事实卡」页确认', del: '删除', added: '已保存' },
+    runs: { facts: ['抽事实', '从 geo/sources/ 的资料里摘候选事实，每条附原文'], probe: ['采样', '用 API 把问题集问一遍，结果追加到 geo/runs.csv'], write: ['写稿', '给还没有草稿的缺口题写稿，只用已确认事实'],
       report: ['出报告', '写本周的疗效报告到 geo/reports/'], weekly: ['每周全流程', '采样、写稿、出报告一起跑'],
       check: ['检查草稿', '按发布规则检查所有草稿'], site: ['生成事实站', '用已确认事实和已通过文章生成 site/'] },
     running: '正在运行：{0}，采样可能要几分钟…', busy: '有任务在运行，请稍候', output: '输出',
     keys: 'API Key（只从环境变量读取，启动工作台前设置）', keySet: '已设置', keyUnset: '未设置', getKey: '去申请',
     config: '自动驾驶设置 geo/autopilot.json', noReports: '还没有报告。',
-    setup: { init: '还没有 geo/ 文件夹，点这里用模板开始', initBtn: '用模板开始', config: '填写 geo/autopilot.json：品牌、竞品、要问的 AI',
+    setup: { sources: '在「资料」页放入官网或产品资料，让 AI 帮你填事实卡', cands: '有 {0} 条候选事实等你看', init: '还没有 geo/ 文件夹，点这里用模板开始', initBtn: '用模板开始', config: '填写 geo/autopilot.json：品牌、竞品、要问的 AI',
       facts: '在「事实卡」里核对并确认事实（至少名称 B01 和一句话说明 B03）', questions: '在「问题集」里写用户真实会问的问题',
       keys: '设置环境变量 {0} 后重启工作台', runs: '在「运行」里点「采样」', review: '有 {0} 篇草稿等你审核' },
     token: '请输入工作台口令（GEO_STUDIO_TOKEN）', enter: '进入', error: '出错了：', disclaimer: 'API 采样不登录、多数不联网，和用户在 App 里看到的可能不同；"是否推荐"是关键词初判，重要结论请在 App 里人工确认。',
   },
   en: {
-    core: 'core', title: 'GEO Doctor Studio', tabs: { overview: 'Overview', gaps: 'Gaps', drafts: 'Drafts', facts: 'Fact card', questions: 'Questions', run: 'Run', reports: 'Reports' },
+    core: 'core', title: 'GEO Doctor Studio', tabs: { overview: 'Overview', gaps: 'Gaps', drafts: 'Drafts', sources: 'Material', facts: 'Fact card', questions: 'Questions', run: 'Run', reports: 'Reports' },
     confirmedFacts: 'Confirmed facts', questions: 'Questions', toReview: 'Drafts to review', approved: 'Approved drafts', gaps: 'Gap questions',
     nextSteps: 'Next steps', trend: 'Recommendation trend (type A questions, counts)', noRuns: 'No samples yet. Click "Sample" under Run, or log manual samples in geo/runs.csv (step 4).',
     platform: 'Platform', batch: 'Batch', date: 'Date', recommend: 'Recommended you', mention: 'Mentioned you', top: 'Most recommended', sources: 'Sources the AI cited',
     noGaps: 'No gaps in the latest samples.', writeGaps: 'Draft for the gaps', youOf: 'you recommended {0}/{1}', draftExists: 'Draft',
     noDraft: 'No drafts yet', save: 'Save', approve: 'Approve', sendBack: 'Back to draft', saved: 'Saved', approvedMsg: 'Approved', backMsg: 'Set back to draft',
     status: 'Status', issues: 'Checks', noIssues: 'No issues', pick: 'Pick a draft on the left', qid: 'Question', from: 'Written by',
-    confirm: 'Confirm', unconfirm: 'Unconfirm', editRaw: 'Edit the file directly', section: 'Section', fact: 'Content', id: 'ID',
+    emptyFact: 'This entry has no content yet; fill it in first', confirm: 'Confirm', unconfirm: 'Unconfirm', editRaw: 'Edit the file directly', section: 'Section', fact: 'Content', id: 'ID',
     cls: 'Type', priority: 'Priority', question: 'Question',
-    runs: { probe: ['Sample', 'Ask the question set through the APIs; appends to geo/runs.csv'], write: ['Draft', 'Draft the gap questions that have no draft, from confirmed facts only'],
+    src: { add: 'Add material', intro: 'Add your website, pricing page, help docs or product notes. The AI only picks facts the material states, each with its quote; quotes not found in the material are dropped. They enter the fact card as pending and are used for drafting only after you confirm them.',
+      url: 'Page URL', fetch: 'Fetch page', name: 'Name (optional)', paste: 'Or paste text', save: 'Save material', file: 'Or pick a .md / .txt / .html file',
+      list: 'Material', none: 'No material yet.', extract: 'Extract facts with AI', cands: 'Candidate facts', noCands: 'No candidates waiting.', fill: 'Fill', addTo: 'Add to', quote: 'Quote',
+      conflict: 'Differs from the fact card: ', apply: 'Write to fact card', ignore: 'Ignore', applyAll: 'Write all', applied: 'Written to the fact card; confirm them on the Fact card page', del: 'Delete', added: 'Saved' },
+    runs: { facts: ['Extract facts', 'Pick candidate facts from geo/sources/, each with its quote'], probe: ['Sample', 'Ask the question set through the APIs; appends to geo/runs.csv'], write: ['Draft', 'Draft the gap questions that have no draft, from confirmed facts only'],
       report: ['Report', 'Write this week\'s report to geo/reports/'], weekly: ['Weekly loop', 'Sample, draft and report in one go'],
       check: ['Check drafts', 'Check every draft against the publishing rules'], site: ['Build fact site', 'Build site/ from confirmed facts and approved articles'] },
     running: 'Running {0}; sampling can take a few minutes…', busy: 'A task is running, please wait', output: 'Output',
     keys: 'API keys (read from environment variables only; set them before starting)', keySet: 'set', keyUnset: 'not set', getKey: 'Get one',
     config: 'Autopilot settings geo/autopilot.json', noReports: 'No reports yet.',
-    setup: { init: 'There is no geo/ folder yet. Start from the templates', initBtn: 'Start from templates', config: 'Fill in geo/autopilot.json: brand, competitors, AIs to ask',
+    setup: { sources: 'Add your website or product material on the Material page and let the AI fill the fact card', cands: '{0} candidate fact(s) waiting', init: 'There is no geo/ folder yet. Start from the templates', initBtn: 'Start from templates', config: 'Fill in geo/autopilot.json: brand, competitors, AIs to ask',
       facts: 'Check and confirm facts under Fact card (at least the name B01 and one-liner B03)', questions: 'Write the questions real users ask under Questions',
       keys: 'Set {0} and restart the studio', runs: 'Click "Sample" under Run', review: '{0} draft(s) waiting for your review' },
     token: 'Enter the studio token (GEO_STUDIO_TOKEN)', enter: 'Enter', error: 'Error: ', disclaimer: 'API samples are not signed in and mostly offline, so they can differ from what users see in the apps; "recommended" is a keyword guess. Confirm important findings in the apps.',
@@ -475,6 +553,8 @@ pre { white-space:pre-wrap; word-break:break-word; background:var(--bg); border:
 .runs .card button { margin-top:8px; }
 .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg); padding:8px 16px; border-radius:8px; font-size:14px; z-index:5; }
 ul.steps { margin:0; padding-left:20px; }
+input.field { padding:6px 10px; font:inherit; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--text); min-width:0; flex:1 1 260px; }
+.cand { border-top:1px solid var(--line); padding:10px 0; }
 details summary { cursor:pointer; color:var(--muted); margin-top:10px; }
 @media (max-width:760px) { .split { grid-template-columns:1fr; } header .dir { max-width:90vw; } }
 </style>
@@ -537,6 +617,9 @@ function steps() {
   }
   const c = S.config || {};
   if (!c.brand || !c.ai || /你的品牌|Your product/.test(c.brand)) s.push(h('li', {}, T.setup.config));
+  if (!S.sources.length && (!S.facts || S.facts.entries.filter((e) => e.confirmed).length < 5)) s.push(h('li', {}, h('a', { href: '#sources', onclick: (e) => { e.preventDefault(); go('sources'); } }, T.setup.sources)));
+  const cand = S.candidates.filter((c) => c.status === 'new').length;
+  if (cand) s.push(h('li', {}, h('a', { href: '#sources', onclick: (e) => { e.preventDefault(); go('sources'); } }, fmt(T.setup.cands, cand))));
   if (!S.facts || !S.facts.entries.some((e) => /^B0?1$/i.test(e.id) && e.confirmed)) s.push(h('li', {}, T.setup.facts));
   if (!S.questions.length) s.push(h('li', {}, T.setup.questions));
   for (const a of String(c.ai || '').split(',').map((x) => x.split(':')[0].trim()).filter(Boolean)) {
@@ -599,7 +682,7 @@ const views = {
   facts() {
     const rows = (S.facts ? S.facts.entries : []).map((e) => [e.id, h('span', { class: 'muted' }, e.section), e.label ? h('span', {}, h('b', {}, e.label), ' ', e.detail) : e.detail,
       pill(e.confirmed ? 'ok' : 'warn', e.status || '—'),
-      h('button', { class: 'btn', onclick: async () => { try { await call('fact/' + encodeURIComponent(e.id), 'POST', { confirmed: !e.confirmed }); await load(); } catch (x) { fail(x); } } }, e.confirmed ? T.unconfirm : T.confirm)]);
+      h('button', { class: 'btn', disabled: !e.confirmed && !e.filled ? true : null, title: !e.confirmed && !e.filled ? T.emptyFact : null, onclick: async () => { try { await call('fact/' + encodeURIComponent(e.id), 'POST', { confirmed: !e.confirmed }); await load(); } catch (x) { fail(x); } } }, e.confirmed ? T.unconfirm : T.confirm)]);
     return [h('section', {}, rows.length ? table([T.id, T.section, T.fact, T.status, ''], rows) : h('p', { class: 'muted' }, S.errors.facts || '—')), editor('facts')];
   },
   questions() {
@@ -615,6 +698,34 @@ const views = {
       h('section', { style: 'margin-top:16px' }, h('h2', {}, T.keys), table(['AI', '', ''], S.keys.map((k) => [k.label + ' · ' + k.env, pill(k.set ? 'ok' : '', k.set ? T.keySet : T.keyUnset),
         k.url ? h('a', { href: k.url, target: '_blank', rel: 'noopener noreferrer' }, T.getKey) : '']))),
       editor('config', T.config),
+    ];
+  },
+  sources() {
+    const act = async (fn, msg) => { try { await fn(); if (msg) toast(msg); await load(); } catch (e) { fail(e); } };
+    const url = h('input', { type: 'url', placeholder: 'https://', class: 'field' });
+    const name = h('input', { type: 'text', placeholder: T.src.name, class: 'field' });
+    const paste = h('textarea', { class: 'short' });
+    const file = h('input', { type: 'file', accept: '.md,.markdown,.txt,.html,.htm' });
+    file.addEventListener('change', () => { const f = file.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => act(() => call('source', 'POST', { name: f.name, text: String(r.result) }), T.src.added); r.readAsText(f); });
+    const cands = S.candidates.filter((c) => c.status === 'new');
+    return [
+      h('section', {}, h('h2', {}, T.src.add), h('p', { class: 'muted' }, T.src.intro),
+        h('div', { class: 'row' }, url, h('button', { class: 'btn', onclick: () => url.value && act(() => call('source', 'POST', { url: url.value }), T.src.added) }, T.src.fetch)),
+        h('div', { class: 'muted' }, T.src.paste), h('div', { class: 'row' }, name), paste,
+        h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => paste.value.trim() && act(() => call('source', 'POST', { name: name.value, text: paste.value }), T.src.added) }, T.src.save)),
+        h('div', { class: 'row' }, h('span', { class: 'muted' }, T.src.file), file)),
+      h('section', {}, h('h2', {}, T.src.list),
+        S.sources.length ? table(['', ''], S.sources.map((x) => [h('span', {}, x.file, x.from ? h('div', { class: 'muted' }, x.from) : null),
+          h('button', { class: 'btn', onclick: () => act(() => call('source/' + encodeURIComponent(x.file), 'DELETE', {})) }, T.src.del)])) : h('p', { class: 'muted' }, T.src.none),
+        S.sources.length ? h('div', { class: 'row' }, h('button', { class: 'btn primary', disabled: S.busy ? true : null, onclick: () => run('facts') }, T.src.extract)) : null),
+      h('section', {}, h('h2', {}, T.src.cands + (cands.length ? ' · ' + cands.length : '')),
+        cands.length ? h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => act(() => call('candidate/all', 'POST', { action: 'apply' }), T.src.applied) }, T.src.applyAll)) : h('p', { class: 'muted' }, T.src.noCands),
+        cands.map((c) => h('div', { class: 'cand' },
+          h('div', {}, h('b', {}, c.id ? T.src.fill + ' ' + c.id : T.src.addTo + ' ' + c.section), ' ', Object.entries(c.fields).map(([k, v]) => k + '：' + v).join('；')),
+          h('div', { class: 'muted' }, T.src.quote + '：「' + c.quote + '」 · ' + c.source),
+          c.conflict.length ? h('div', {}, pill('warn', T.src.conflict + c.conflict.map((x) => x.field + '「' + x.current + '」').join('；'))) : null,
+          h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: () => act(() => call('candidate/' + c.cid, 'POST', { action: 'apply' }), T.src.applied) }, T.src.apply),
+            h('button', { class: 'btn', onclick: () => act(() => call('candidate/' + c.cid, 'POST', { action: 'ignore' })) }, T.src.ignore))))),
     ];
   },
   reports() {
