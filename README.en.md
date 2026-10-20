@@ -76,6 +76,8 @@ Like a doctor's visit, in eight steps, each with a file you keep:
 
 Supports **software, apps, websites, mini programs and online products**. A local-business version is in progress.
 
+**Rather not use the command line? Open the studio.** Run `npx -p github:Fangx-AI/geo-doctor geo-studio` in your project and open `http://127.0.0.1:4173`: see the recommendation trend and gap questions per AI, confirm facts with a click, review each drafted article (a draft that cites an unconfirmed fact cannot be approved), and sample, draft, report and build the fact site with one click each. No database: your data is the `geo/` folder, and it only listens on your own machine by default.
+
 > Step 4 can run automatically: `OPENAI_API_KEY=… npx -p github:Fangx-AI/geo-doctor geo-probe run geo/questions.csv --ai openai,perplexity --brand "Your brand" --competitors "Rival A,Rival B"` asks each question twice, archives every answer and counts who gets recommended. API answers can differ from the apps (no login, often no web search), so confirm important conclusions by asking in the app.
 >
 > Steps 6 and 7 also run from the command line: `npx -p github:Fangx-AI/geo-doctor geo-publish check geo/drafts` checks a batch, `… site … --to wordpress` publishes to your site, `… pack …` packages posts for other platforms. Run `geo-publish --help` for the full usage.

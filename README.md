@@ -90,6 +90,8 @@
 
 目前支持**软件、App、网站、小程序和线上产品**。本地门店版本在路上。
 
+**不想用命令行？打开工作台。** 在项目目录运行 `npx -p github:Fangx-AI/geo-doctor geo-studio`，浏览器打开 `http://127.0.0.1:4173`：看各 AI 的推荐趋势和缺口题，点一下确认事实，逐篇审核 AI 写的稿（引用了未确认事实的稿不能通过），一键采样、写稿、出报告、生成事实站。不用装数据库，数据就是 `geo/` 文件夹；默认只在你自己电脑上打开。
+
 > 第 4 步可以用命令行自动问：`DEEPSEEK_API_KEY=… npx -p github:Fangx-AI/geo-doctor geo-probe run geo/questions.csv --ai deepseek,qwen --brand "你的品牌" --competitors "竞品甲,竞品乙"`，每题问 2 次，存下全部原文，算出推荐率和竞品推荐榜。用法见 [第 4 步说明](skills/geo-doctor/references/04-sampling.md#自动采样用-api-批量问可选)。
 >
 > 第 6、7 步也可以单独用命令行跑：`npx -p github:Fangx-AI/geo-doctor geo-publish check geo/drafts` 检查一批草稿，`… site … --to wordpress` 发到官网，`… pack …` 打包第三方平台稿件。完整用法见 [第 7 步说明](skills/geo-doctor/references/07-publishing.md#第三步批量发布自己的官网自动发第三方平台由人发)。

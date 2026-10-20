@@ -27,6 +27,7 @@ Install: send this to an AI assistant that supports skills: "帮我安装这个 
 - [geo-publish](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-publish.mjs): checks a batch of drafts against the fact card, publishes to a static site or WordPress, and packages posts for other platforms
 - [geo-site](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-site.mjs): builds an AI-readable fact site (fact sheet, FAQ, articles, JSON-LD, llms.txt, sitemap) from the confirmed facts in a fact card, with a GitHub Actions workflow that deploys it to GitHub Pages
 - [geo-autopilot](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-autopilot.mjs): the weekly loop; samples again, finds questions where a competitor is recommended and you are not, drafts one article per gap from confirmed facts, writes a progress report and opens a pull request for review
+- [geo-studio](https://github.com/Fangx-AI/geo-doctor/blob/master/cli/geo-studio.mjs): local web console (`npx -p github:Fangx-AI/geo-doctor geo-studio`); recommendation trend, gaps, fact confirmation, draft review and one-click runs over the geo/ folder, no database
 - [Install guide](https://github.com/Fangx-AI/geo-doctor/blob/master/docs/install.md): per-platform install notes and test results
 
 ## Handbook (Chinese)
