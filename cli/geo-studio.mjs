@@ -20,6 +20,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { useEnvProxy } from './proxy.mjs';
 import { PROVIDERS, parseCsv, loadQuestions, summarize, main as probeMain } from './geo-probe.mjs';
 import { AUTO, FILL, PLATFORMS, SITE, appendLog, checkDrafts, fillItems, fillJson, fillUserscript, loadDrafts, parseFacts, readLog, renderFor, main as publishMain } from './geo-publish.mjs';
 import { parseFactCard, loadFacts, main as siteMain } from './geo-site.mjs';
@@ -1262,5 +1263,6 @@ export async function main(argv, { env = process.env, out = console.log, err = c
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href || /^geo-studio(\.mjs)?$/.test(basename(process.argv[1] || ''))) {
+  useEnvProxy();
   main(process.argv.slice(2)).then((code) => { process.exitCode = code; }, (e) => { console.error(e.message); process.exitCode = 2; });
 }

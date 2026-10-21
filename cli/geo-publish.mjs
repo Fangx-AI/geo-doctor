@@ -14,6 +14,7 @@
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { useEnvProxy } from './proxy.mjs';
 
 export const VERSION = '1.0.0';
 const UA = 'geo-doctor-publish/1.0 (+https://github.com/Fangx-AI/geo-doctor)';
@@ -1125,5 +1126,6 @@ export async function main(argv, { env = process.env, out = console.log, err = c
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href || /^geo-publish(\.mjs)?$/.test(basename(process.argv[1] || ''))) {
+  useEnvProxy();
   main(process.argv.slice(2)).then((code) => { process.exitCode = code; }, (e) => { console.error(e); process.exitCode = 2; });
 }
