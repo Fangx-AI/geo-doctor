@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { useEnvProxy } from './proxy.mjs';
 import { deflateSync, inflateSync } from 'node:zlib';
 
 export const VERSION = '1.2.0';
@@ -785,5 +786,6 @@ export async function main(argv) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href || /^(geo-audit|geo-doctor)$/.test(basename(process.argv[1] || ''))) {
+  useEnvProxy();
   main(process.argv.slice(2)).then((code) => { process.exitCode = code; }, (e) => { console.error(e); process.exitCode = 2; });
 }

@@ -15,6 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { useEnvProxy } from './proxy.mjs';
 import { articleHtml, checkDrafts, FILL, fillItems, fillJson, fillUserscript, loadDrafts, parseFacts, PLATFORMS, SITE } from './geo-publish.mjs';
 
 export const VERSION = '1.0.0';
@@ -663,5 +664,6 @@ export async function main(argv, { out = console.log, err = console.error } = {}
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href || /^geo-site(\.mjs)?$/.test(basename(process.argv[1] || ''))) {
+  useEnvProxy();
   main(process.argv.slice(2)).then((code) => { process.exitCode = code; }, (e) => { console.error(e); process.exitCode = 2; });
 }

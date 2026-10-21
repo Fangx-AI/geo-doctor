@@ -14,6 +14,7 @@
     "geo-facts": "cli/geo-facts.mjs"
   },
   "files": [
+    "cli/proxy.mjs",
     "cli/geo-audit.mjs",
     "cli/geo-publish.mjs",
     "cli/geo-probe.mjs",

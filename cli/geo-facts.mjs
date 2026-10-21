@@ -18,6 +18,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { useEnvProxy } from './proxy.mjs';
 import { PROVIDERS, ask } from './geo-probe.mjs';
 import { parseFactCard } from './geo-site.mjs';
 import { cleanHtml, visibleText } from './geo-audit.mjs';
@@ -544,5 +545,6 @@ export async function main(argv, { env = process.env, out = console.log, err = c
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href || /^geo-facts(\.mjs)?$/.test(basename(process.argv[1] || ''))) {
+  useEnvProxy();
   main(process.argv.slice(2)).then((code) => { process.exitCode = code; }, (e) => { console.error(e.message); process.exitCode = 2; });
 }

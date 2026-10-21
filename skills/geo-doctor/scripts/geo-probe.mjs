@@ -16,6 +16,7 @@ import { createHash } from 'node:crypto';
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { useEnvProxy } from './proxy.mjs';
 
 export const VERSION = '1.0.0';
 
@@ -533,5 +534,6 @@ export async function main(argv, { env = process.env, out = console.log, err = c
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href || /^geo-probe(\.mjs)?$/.test(basename(process.argv[1] || ''))) {
+  useEnvProxy();
   main(process.argv.slice(2)).then((code) => { process.exitCode = code; }, (e) => { console.error(e); process.exitCode = 2; });
 }
