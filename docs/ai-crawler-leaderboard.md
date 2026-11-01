@@ -1,21 +1,21 @@
 # 🚧 中文网站 AI 爬虫封锁榜
 
-> [GEO 实战手册](handbook.md) › AI 爬虫封锁榜 · 扫描日期 2026-10-14 · 可复现：`node scripts/ai-crawler-scan.mjs`
+> [GEO 实战手册](../README.md) › AI 爬虫封锁榜 · 扫描日期 2026-11-01 · 可复现：`node scripts/ai-crawler-scan.mjs`
 
-**我们读取了 97 个知名中文网站公开的 robots.txt，看它们的首页允许哪些 AI 和搜索爬虫抓取。成功读取 94 个。**
+**我们读取了 97 个知名中文网站公开的 robots.txt，看它们的首页允许哪些 AI 和搜索爬虫抓取。成功读取 93 个。**
 
 | 发现 | 网站数 | 占比 |
 | --- | ---: | ---: |
 | 🚫 ChatGPT 搜索（OAI-SearchBot）抓不了首页 | 9 | 10% |
-| 🚫 4 个 AI 搜索爬虫（ChatGPT 搜索、ChatGPT 用户访问、Perplexity、Claude 搜索）全部挡住 | 9 | 10% |
-| 🎯 百度能抓，但 4 个 AI 搜索爬虫全部挡住 | 7 | 7% |
-| 🚫 屏蔽 GPTBot（OpenAI 训练） | 16 | 17% |
-| 🚫 屏蔽 Bytespider（字节跳动） | 8 | 9% |
-| ✅ 对表中所有爬虫都不设限 | 78 | 83% |
+| 🚫 4 个 AI 搜索爬虫（ChatGPT 搜索、ChatGPT 用户访问、Perplexity、Claude 搜索）全部挡住 | 8 | 9% |
+| 🎯 百度能抓，但 4 个 AI 搜索爬虫全部挡住 | 7 | 8% |
+| 🚫 屏蔽 GPTBot（OpenAI 训练） | 17 | 18% |
+| 🚫 屏蔽 Bytespider（字节跳动） | 9 | 10% |
+| ✅ 对表中所有爬虫都不设限 | 76 | 82% |
 
 ### 重点发现
 
-- **4 个 AI 搜索爬虫全部挡住的网站**：百度、知乎、小红书、微博、马蜂窝、贝壳找房、懂车帝、作业帮、中国知网。
+- **4 个 AI 搜索爬虫全部挡住的网站**：百度、知乎、小红书、微博、马蜂窝、贝壳找房、作业帮、中国知网。
 - **其中百度仍能抓取的**：百度、知乎、小红书、微博、马蜂窝、贝壳找房、作业帮。
 - 这些大多是内容平台。**如果你的 GEO 策略是"在知乎、小红书、微博上铺内容"，按 robots.txt 规则，ChatGPT 搜索、Perplexity、Claude 搜索都不应抓取这些页面**，它们更可能引用你自己官网或其他开放平台上的内容。国内 AI 产品各自怎么获取这些平台的内容，robots.txt 看不出来。
 
@@ -79,7 +79,7 @@
 | [Gitee](https://gitee.com/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [V2EX](https://www.v2ex.com/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [InfoQ 中文](https://www.infoq.cn/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [菜鸟教程](https://www.runoob.com/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [菜鸟教程](https://www.runoob.com/robots.txt) | 🚫 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 |
 
 ## 电商
 
@@ -89,10 +89,10 @@
 | [天猫](https://www.tmall.com/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [京东](https://www.jd.com/robots.txt) ¹ ² | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [拼多多](https://www.pinduoduo.com/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [唯品会](https://www.vip.com/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [苏宁易购](https://www.suning.com/robots.txt) ¹ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [唯品会](https://www.vip.com/robots.txt) | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 | ✅ | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 |
+| [苏宁易购](https://www.suning.com/robots.txt) | — | — | — | — | — | — | — | — | — | — | — | — |
 | [什么值得买](https://www.smzdm.com/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [当当](https://www.dangdang.com/robots.txt) | — | — | — | — | — | — | — | — | — | — | — | — |
+| [当当](https://www.dangdang.com/robots.txt) ¹ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ## 本地生活
 
@@ -113,7 +113,7 @@
 | 网站 | 百度 | Google | Bing / Copilot | ChatGPT 搜索 | ChatGPT 用户访问 | Perplexity | Claude 搜索 | GPTBot（训练） | ClaudeBot（训练） | Google-Extended（训练） | Bytespider（字节） | CCBot（训练） |
 | --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 | [汽车之家](https://www.autohome.com.cn/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [懂车帝](https://www.dongchedi.com/robots.txt) | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 |
+| [懂车帝](https://www.dongchedi.com/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [中关村在线](https://www.zol.com.cn/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [丁香园](https://www.dxy.cn/robots.txt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [好大夫在线](https://www.haodf.com/robots.txt) ¹ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -184,7 +184,7 @@
 | [学堂在线](https://www.xuetangx.com/robots.txt) ¹ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [中国大学MOOC](https://www.icourse163.org/robots.txt) ¹ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [作业帮](https://www.zuoyebang.com/robots.txt) | ✅ | ✅ | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | ✅ | 🚫 |
-| [网易有道](https://www.youdao.com/robots.txt) ¹ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [网易有道](https://www.youdao.com/robots.txt) | — | — | — | — | — | — | — | — | — | — | — | — |
 | [中国知网](https://www.cnki.net/robots.txt) ² | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 |
 
 ## 方法与局限
@@ -196,6 +196,6 @@
 - ¹ 没有 robots.txt（返回 4xx 或 HTML 页面），按规范视为不限制。
 - ² robots.txt 跳转到了别的域名（例如境外请求被导向海外站），表中是跳转后那份规则。
 - **用户触发的访问**：ChatGPT-User、Perplexity-User 这类"用户让 AI 打开某个网页"的请求，平台文档说明不一定遵守 robots.txt；表里按规则字面判断。
-- — 扫描时读取失败（超时、5xx 或连接被拒，共 3 个），不计入占比的分母。
+- — 扫描时读取失败（超时、5xx 或连接被拒，共 4 个），不计入占比的分母。
 - **名单**：[data/sites-cn.txt](../data/sites-cn.txt)，原始数据：[data/ai-crawler-scan.json](../data/ai-crawler-scan.json)。漏了谁、判断错了，欢迎提 [issue](https://github.com/Fangx-AI/geo-doctor/issues/new/choose) 或 PR。
 - robots.txt 随时会改，本表只代表扫描当天的状态。
