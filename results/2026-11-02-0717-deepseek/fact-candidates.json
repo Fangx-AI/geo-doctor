@@ -1,0 +1,395 @@
+{
+  "done": {
+    "README.md": "50cc23429f30f1b8"
+  },
+  "items": [
+    {
+      "cid": "c1",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "B03",
+      "section": "基本信息",
+      "fields": {
+        "项目": "一句话说明",
+        "内容": "一句话装进你的 AI 助手。它会查出 AI 推荐了哪些竞品、为什么不是你、推荐别人时读的是哪些网站，再帮你成批写出 AI 愿意引用的内容、发到 AI 会读的地方，最后用推荐率复查有没有涨。"
+      },
+      "quote": "一句话装进你的 AI 助手。它会查出 AI 推荐了哪些竞品、为什么不是你、推荐别人时读的是哪些网站，<br>再帮你成批写出 AI 愿意引用的内容、发到 AI 会读的地方，最后用推荐率复查有没有涨。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "开源的 GEO（生成式引擎优化）工具：查出 AI 推荐了哪些竞品、为什么不推荐你，按事实卡写 AI 愿意引用的内容，并用推荐率复查效果"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c2",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "U02",
+      "section": "适合谁",
+      "fields": {
+        "人群": "不想用命令行的人",
+        "场景": "在项目目录运行 npx -p github:Fangx-AI/geo-doctor geo-studio，浏览器打开 http://127.0.0.1:4173 使用工作台"
+      },
+      "quote": "**不想用命令行？打开工作台。** 在项目目录运行 `npx -p github:Fangx-AI/geo-doctor geo-studio`，浏览器打开 `http://127.0.0.1:4173`",
+      "conflict": [
+        {
+          "field": "人群",
+          "current": "不想搭服务器、预算有限的小团队"
+        },
+        {
+          "field": "场景",
+          "current": "用一句话装进 AI 助手，或在自己电脑上打开网页工作台"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c3",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "N03",
+      "section": "不适合谁",
+      "fields": {
+        "内容": "本地门店"
+      },
+      "quote": "目前支持**软件、App、网站、小程序和线上产品**。本地门店版本在路上。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "本地门店：目前只支持软件、App、网站、小程序和线上产品"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c4",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "F03",
+      "section": "核心能力",
+      "fields": {
+        "能力": "算推荐率，排出竞品推荐榜，逐题列出“竞品被推荐、你没有”的缺口和 AI 读的网站",
+        "限制": "需要先有采样记录"
+      },
+      "quote": "算推荐率，排出竞品推荐榜，逐题列出\"竞品被推荐、你没有\"的缺口和 AI 读的网站",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "找出竞品被推荐、你没被推荐的问题，每个 AI 分开算"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c5",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "F04",
+      "section": "核心能力",
+      "fields": {
+        "能力": "一道缺口题一篇，只用事实卡里的事实，脚本自动查占位符、夸大词、未确认事实和重复稿",
+        "限制": "稿件要人审核后才发布"
+      },
+      "quote": "一道缺口题一篇，只用事实卡里的事实，脚本自动查占位符、夸大词、未确认事实和重复稿",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "只用事实卡里已确认的事实写稿，自动检查占位符、夸大词、未确认事实和重复稿"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c6",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "F05",
+      "section": "核心能力",
+      "fields": {
+        "能力": "用事实卡一键生成事实站，免费放到 GitHub Pages",
+        "限制": "只收已确认的事实"
+      },
+      "quote": "用事实卡一键生成事实站，免费放到 GitHub Pages",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "用事实卡生成 AI 能读懂的事实站（事实页、常见问题、llms.txt、结构化数据），可免费放到 GitHub Pages"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c7",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "F06",
+      "section": "核心能力",
+      "fields": {
+        "能力": "放在 GitHub 上还能开启自动驾驶：每周一自动采样、给新缺口写稿、出疗效报告并开一个 PR，你审完点合并就发布",
+        "限制": "需要放在 GitHub 上"
+      },
+      "quote": "放在 GitHub 上还能开启**自动驾驶**：每周一自动采样、给新缺口写稿、出疗效报告并开一个 PR，你审完点合并就发布",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "每周自动复查：采样、给新缺口写稿、出疗效报告，并开一个 PR 给人审"
+        },
+        {
+          "field": "限制",
+          "current": "需要放在 GitHub 上并配置 API Key"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c8",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "P01",
+      "section": "价格",
+      "fields": {
+        "项目": "免费版或试用",
+        "内容": "免费开源，MIT 开源许可"
+      },
+      "quote": "**免费开源** · **不用服务器** · **一句话安装** · **中英双语** · 已在 WorkBuddy 实测可用",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "完全免费，MIT 开源许可；调用各家 AI 的 API 费用由你自己的账号支付"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c9",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "C01",
+      "section": "使用条件",
+      "fields": {
+        "项目": "支持平台",
+        "内容": "Claude Code、Codex、Kimi Code、WorkBuddy 等能安装技能的 AI 助手"
+      },
+      "quote": "在 Claude Code、Codex、Kimi Code、WorkBuddy 等能安装技能的 AI 助手里，新开一个对话，发送：",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "Claude Code、Codex、Kimi Code、支持上传技能包的 AI 客户端、Node.js 18 及以上的命令行"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c10",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "X01",
+      "section": "明确不支持",
+      "fields": {
+        "内容": "知乎、公众号、头条等打包成可直接粘贴的稿件，由你本人点发布"
+      },
+      "quote": "知乎、公众号、头条等打包成可直接粘贴的稿件，由你本人点发布",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "不会模拟登录替你发布到知乎、公众号、小红书等没有开放发布接口的平台：只排好版，由你本人点发布；有官方接口的 dev.to 可以用你自己的 Key 自动发"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c11",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": "S01",
+      "section": "数据与安全",
+      "fields": {
+        "项目": "数据存储位置",
+        "内容": "数据就是 geo/ 文件夹"
+      },
+      "quote": "不用装数据库，数据就是 `geo/` 文件夹；默认只在你自己电脑上打开。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "所有数据都是你项目里 geo/ 文件夹的普通文件，没有数据库，不上传到 GEO 医生的服务器（GEO 医生没有服务器）"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c12",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "使用条件",
+      "fields": {
+        "项目": "Node.js 版本",
+        "内容": "18 以上"
+      },
+      "quote": "装了 [Node.js](https://nodejs.org/zh-cn)（18 以上）的话，一行命令检查 AI 能不能读到你的网页",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c13",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "体检 7 类问题并打 0–100 分：访问与跳转、robots.txt 对 9 个 AI / 搜索爬虫的规则、防火墙是否拦 AI、noindex、canonical、正文是否在原始 HTML 里、sitemap 与结构化数据"
+      },
+      "quote": "检查 7 类问题并打 0–100 分：访问与跳转、robots.txt 对 9 个 AI / 搜索爬虫的规则、防火墙是否拦 AI、noindex、canonical、正文是否在原始 HTML 里、sitemap 与结构化数据。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c14",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "体检脚本零依赖，只访问你给的网址和它的 robots.txt、sitemap.xml，不向第三方上传数据，不读密钥",
+        "限制": "会模拟 AI 爬虫的身份访问页面，用来检查防火墙有没有拦 AI，所以请只体检自己的网站"
+      },
+      "quote": "体检脚本零依赖，只访问你给的网址和它的 robots.txt、sitemap.xml，不向第三方上传数据，不读密钥。它会模拟 AI 爬虫的身份访问页面，用来检查防火墙有没有拦 AI，所以请只体检自己的网站。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c15",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "目标是 ChatGPT、Claude、Perplexity、Gemini、Copilot 时，体检会重点看这些 AI 的搜索爬虫有没有被挡，发布指导改用必应、Google 的收录入口和海外商家平台"
+      },
+      "quote": "目标是 ChatGPT、Claude、Perplexity、Gemini、Copilot 时，体检会重点看这些 AI 的搜索爬虫有没有被挡，发布指导改用必应、Google 的收录入口和海外商家平台。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c16",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "明确不支持",
+      "fields": {
+        "内容": "普通聊天 App 目前装不了技能"
+      },
+      "quote": "普通聊天 App 目前装不了技能。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c17",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "每题问 2 次，看出现率而不是单次排名；只想提高豆包，就只问豆包，一轮 15 到 20 分钟"
+      },
+      "quote": "AI 每次回答都不一样，所以每题问 2 次，看出现率而不是单次排名。只想提高豆包，就只问豆包，一轮 15 到 20 分钟。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c18",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "明确不支持",
+      "fields": {
+        "内容": "编造用户评价、刷量这类做法，skill 里明确拒绝"
+      },
+      "quote": "编造用户评价、刷量这类做法，skill 里明确拒绝，高风险行业另有红线",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c19",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "明确不支持",
+      "fields": {
+        "内容": "第三方平台（知乎、公众号）不代发：只帮你排好版，由你本人用真实账号发"
+      },
+      "quote": "官网可以自动发；知乎、公众号这些第三方平台只帮你排好版，由你本人用真实账号发，因为机器批量发帖容易封号",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c20",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "加 --card geo-card.png，生成一张 1200×630 的分享图；本机有 Chrome 或 Edge 就能出 PNG，没有就给 SVG；任何分数都能生成"
+      },
+      "quote": "**想晒一下？** 加 `--card geo-card.png`，生成一张 1200×630 的分享图，发朋友圈、群聊、即刻、小红书都行（本机有 Chrome 或 Edge 就能出 PNG，没有就给 SVG）。任何分数都能生成，改前改后各一张最有说服力。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c21",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "用事实卡里已确认的事实生成事实页、常见问题页、llms.txt 和结构化数据，体检 100 分；geo-site action 再写一个工作流，自动发布到 GitHub Pages"
+      },
+      "quote": "用事实卡里已确认的事实生成事实页、常见问题页、`llms.txt` 和结构化数据，体检 100 分；`geo-site action` 再写一个工作流，自动发布到 GitHub Pages。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c22",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "geo-autopilot action 写一个每周一运行的工作流：重新采样、找出竞品被推荐而你没有的题、只用已确认的事实给每道缺口写一篇稿、写疗效报告，最后开一个 PR 给你审；合并即发布"
+      },
+      "quote": "`npx -p github:Fangx-AI/geo-doctor geo-autopilot action` 写一个每周一运行的工作流：重新采样、找出竞品被推荐而你没有的题、只用已确认的事实给每道缺口写一篇稿、写疗效报告，最后开一个 PR 给你审。合并即发布，你只需要看稿、点合并。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c23",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "数据与安全",
+      "fields": {
+        "项目": "第三方上传",
+        "内容": "体检脚本不向第三方上传数据，不读密钥"
+      },
+      "quote": "体检脚本零依赖，只访问你给的网址和它的 robots.txt、sitemap.xml，不向第三方上传数据，不读密钥。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c24",
+      "status": "new",
+      "date": "2026-11-02",
+      "id": null,
+      "section": "基本信息",
+      "fields": {
+        "项目": "给 AI 读的项目简介",
+        "内容": "llms.txt"
+      },
+      "quote": "给 AI 读的项目简介：[llms.txt](llms.txt)。",
+      "conflict": [],
+      "source": "README.md"
+    }
+  ]
+}
