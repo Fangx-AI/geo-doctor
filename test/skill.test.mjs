@@ -8,6 +8,8 @@ const ROOT = 'skills';
 const skills = readdirSync(ROOT).filter((d) => statSync(join(ROOT, d)).isDirectory());
 
 function frontmatter(md) {
+  // Read files as text, so a Windows checkout (CRLF) parses the same as CI (LF).
+  md = md.replace(/\r\n/g, '\n');
   const m = md.match(/^---\n([\s\S]*?)\n---\n/);
   assert.ok(m, 'SKILL.md must start with YAML frontmatter');
   const out = {};
