@@ -1,0 +1,340 @@
+{
+  "done": {
+    "README.md": "50cc23429f30f1b8"
+  },
+  "items": [
+    {
+      "cid": "c1",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": "P01",
+      "section": "价格",
+      "fields": {
+        "项目": "免费版或试用",
+        "内容": "skill 和体检脚本都是开源的（MIT），只消耗你自己 AI 助手的额度"
+      },
+      "quote": "skill 和体检脚本都是开源的（MIT），只消耗你自己 AI 助手的额度。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "完全免费，MIT 开源许可；调用各家 AI 的 API 费用由你自己的账号支付"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c2",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": "C01",
+      "section": "使用条件",
+      "fields": {
+        "项目": "支持平台",
+        "内容": "Claude Code、Codex、Kimi Code、WorkBuddy 这类能装技能的助手"
+      },
+      "quote": "在 WorkBuddy、Claude Code、Codex、Kimi Code 这类能装技能的助手里做诊断",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "Claude Code、Codex、Kimi Code、支持上传技能包的 AI 客户端、Node.js 18 及以上的命令行"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c3",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": "C02",
+      "section": "使用条件",
+      "fields": {
+        "项目": "地区或语言",
+        "内容": "你用英文跟它说话，它就全程用英文，写出的内容也是英文"
+      },
+      "quote": "你用英文跟它说话，它就全程用英文，写出的内容也是英文。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "中文、英文"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c4",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": "X01",
+      "section": "明确不支持",
+      "fields": {
+        "内容": "知乎、公众号这些第三方平台只帮你排好版，由你本人用真实账号发"
+      },
+      "quote": "知乎、公众号这些第三方平台只帮你排好版，由你本人用真实账号发",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "不会模拟登录替你发布到知乎、公众号、小红书等没有开放发布接口的平台：只排好版，由你本人点发布；有官方接口的 dev.to 可以用你自己的 Key 自动发"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c5",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": "X02",
+      "section": "明确不支持",
+      "fields": {
+        "内容": "编造用户评价、刷量这类做法，skill 里明确拒绝"
+      },
+      "quote": "编造用户评价、刷量这类做法，skill 里明确拒绝",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "不保证 AI 排名，不刷量，不写虚假评价"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c6",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "明确不支持",
+      "fields": {
+        "内容": "普通聊天 App 目前装不了技能"
+      },
+      "quote": "普通聊天 App 目前装不了技能。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c7",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "数据与安全",
+      "fields": {
+        "项目": "体检脚本",
+        "内容": "零依赖，只访问你给的网址和它的 robots.txt、sitemap.xml，不向第三方上传数据，不读密钥"
+      },
+      "quote": "体检脚本零依赖，只访问你给的网址和它的 robots.txt、sitemap.xml，不向第三方上传数据，不读密钥。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c8",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "体检检查 7 类问题并打 0–100 分：访问与跳转、robots.txt 对 9 个 AI / 搜索爬虫的规则、防火墙是否拦 AI、noindex、canonical、正文是否在原始 HTML 里、sitemap 与结构化数据"
+      },
+      "quote": "检查 7 类问题并打 0–100 分：访问与跳转、robots.txt 对 9 个 AI / 搜索爬虫的规则、防火墙是否拦 AI、noindex、canonical、正文是否在原始 HTML 里、sitemap 与结构化数据。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c9",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "体检到 80 分以上，命令行最后会多给你一行徽章代码；加 --badge geo-badge.svg 可以生成不依赖外部服务的 SVG"
+      },
+      "quote": "体检到 **80 分以上**，命令行最后会多给你一行徽章代码，贴到 README 或官网页脚，告诉访客\"AI 爬虫能读到这个网站\"。加 `--badge geo-badge.svg` 可以生成不依赖外部服务的 SVG。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c10",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "加 --card geo-card.png，生成一张 1200×630 的分享图；本机有 Chrome 或 Edge 就能出 PNG，没有就给 SVG"
+      },
+      "quote": "加 `--card geo-card.png`，生成一张 1200×630 的分享图，发朋友圈、群聊、即刻、小红书都行（本机有 Chrome 或 Edge 就能出 PNG，没有就给 SVG）。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c11",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "geo-site build 用事实卡里已确认的事实生成事实页、常见问题页、llms.txt 和结构化数据，体检 100 分；geo-site action 再写一个工作流，自动发布到 GitHub Pages"
+      },
+      "quote": "用事实卡里已确认的事实生成事实页、常见问题页、`llms.txt` 和结构化数据，体检 100 分；`geo-site action` 再写一个工作流，自动发布到 GitHub Pages。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c12",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "地理 autopilot action 写一个每周一运行的工作流：重新采样、找出竞品被推荐而你没有的题、只用已确认的事实给每道缺口写一篇稿、写疗效报告，最后开一个 PR 给你审；合并即发布"
+      },
+      "quote": "写一个每周一运行的工作流：重新采样、找出竞品被推荐而你没有的题、只用已确认的事实给每道缺口写一篇稿、写疗效报告，最后开一个 PR 给你审。合并即发布，你只需要看稿、点合并。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c13",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "每题问 2 次，看出现率而不是单次排名"
+      },
+      "quote": "AI 每次回答都不一样，所以每题问 2 次，看出现率而不是单次排名。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c14",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "只想提高豆包，就只问豆包，一轮 15 到 20 分钟"
+      },
+      "quote": "只想提高豆包，就只问豆包，一轮 15 到 20 分钟。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c15",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "目标是 ChatGPT、Claude、Perplexity、Gemini、Copilot 时，体检会重点看这些 AI 的搜索爬虫有没有被挡，发布指导改用必应、Google 的收录入口和海外商家平台"
+      },
+      "quote": "目标是 ChatGPT、Claude、Perplexity、Gemini、Copilot 时，体检会重点看这些 AI 的搜索爬虫有没有被挡，发布指导改用必应、Google 的收录入口和海外商家平台。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c16",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "明确不支持",
+      "fields": {
+        "内容": "徽章和分享图只代表那次技术体检的结果，不代表 AI 一定会推荐这个网站"
+      },
+      "quote": "徽章和分享图只代表那次技术体检的结果，**不代表** AI 一定会推荐这个网站。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c17",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "明确不支持",
+      "fields": {
+        "内容": "请只体检自己的网站"
+      },
+      "quote": "它会模拟 AI 爬虫的身份访问页面，用来检查防火墙有没有拦 AI，所以请只体检自己的网站。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c18",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "明确不支持",
+      "fields": {
+        "内容": "不能保证豆包推荐我"
+      },
+      "quote": "能保证豆包推荐我吗？**不能，谁都不能。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c19",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "公开证据",
+      "fields": {
+        "类型": "徽章说明文档",
+        "地址": "docs/badge.md"
+      },
+      "quote": "颜色、每周自动更新和官网 HTML 版见 [徽章说明](docs/badge.md)。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c20",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "公开证据",
+      "fields": {
+        "类型": "公开手册",
+        "地址": "docs/handbook.md"
+      },
+      "quote": "GEO 医生背后的方法都写成了公开手册，每条结论附官方原文或研究出处，不装 skill 也能照着做：[打开手册 →](docs/handbook.md)",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c21",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "公开证据",
+      "fields": {
+        "类型": "中文网站 AI 爬虫封锁榜",
+        "地址": "docs/ai-crawler-leaderboard.md"
+      },
+      "quote": "🚧 **[中文网站 AI 爬虫封锁榜](docs/ai-crawler-leaderboard.md)**：我们读取了 97 个知名中文网站的 robots.txt。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c22",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "公开证据",
+      "fields": {
+        "类型": "项目简介",
+        "地址": "llms.txt"
+      },
+      "quote": "给 AI 读的项目简介：[llms.txt](llms.txt)。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c23",
+      "status": "new",
+      "date": "2026-11-09",
+      "id": null,
+      "section": "公开证据",
+      "fields": {
+        "类型": "15 分钟上手指南",
+        "地址": "docs/quickstart.md"
+      },
+      "quote": "第一次用？跟着 [15 分钟上手](docs/quickstart.md)：问 AI、跑体检、改一段文案",
+      "conflict": [],
+      "source": "README.md"
+    }
+  ]
+}
