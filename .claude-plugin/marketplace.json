@@ -1,14 +1,16 @@
 {
   "name": "geo-doctor",
-  "owner": { "name": "Fangx-AI" },
+  "owner": {
+    "name": "Fangx-AI"
+  },
   "metadata": {
-    "description": "GEO 医生：中英双语 GEO（生成式引擎优化）全流程 skill"
+    "description": "让软件、产品、网站、小程序被豆包、DeepSeek、元宝、千问、文心、Kimi、ChatGPT、Claude、Perplexity、Gemini、Copilot 找到、说对、推荐和引用。每个技能只做一件事，按需安装。"
   },
   "plugins": [
     {
       "name": "geo-doctor",
       "source": "./",
-      "description": "让软件、产品、网站、小程序被豆包、DeepSeek、元宝、千问、文心、Kimi、ChatGPT、Claude、Perplexity、Gemini、Copilot 找到、说对、推荐和引用：体检 → 事实卡 → 问题集 → 采样 → 诊断 → 写内容 → 发布指导 → 复查",
+      "description": "让软件、产品、网站、小程序被豆包、DeepSeek、元宝、千问、文心、Kimi、ChatGPT、Claude、Perplexity、Gemini、Copilot 找到、说对、推荐和引用。每个技能只做一件事，按需安装。",
       "version": "1.8.0"
     }
   ]

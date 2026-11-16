@@ -22,8 +22,8 @@
     "cli/geo-autopilot.mjs",
     "cli/geo-facts.mjs",
     "cli/geo-studio.mjs",
-    "skills/geo-doctor/assets/fact-card.yaml",
-    "skills/geo-doctor/assets/questions.csv",
+    "skills/ai-content-writer/assets/fact-card.yaml",
+    "skills/ai-visibility/assets/questions.csv",
     "LICENSE-docs.md"
   ],
   "engines": {

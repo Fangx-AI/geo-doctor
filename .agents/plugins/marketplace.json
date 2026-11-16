@@ -1,0 +1,20 @@
+{
+  "name": "geo-doctor",
+  "interface": {
+    "displayName": "GEO Doctor"
+  },
+  "plugins": [
+    {
+      "name": "geo-doctor",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Marketing"
+    }
+  ]
+}

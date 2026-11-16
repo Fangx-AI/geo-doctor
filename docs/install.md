@@ -42,11 +42,11 @@ https://github.com/Fangx-AI/geo-doctor/tree/master/skills/geo-doctor
 npx skills add Fangx-AI/geo-doctor -g
 ```
 
-- 不加 `-g` 装到当前项目，加了装到用户目录；`-a <agent>` 指定客户端，`-s geo-doctor` 只装这一个技能。
+- 不加 `-g` 装到当前项目，加了装到用户目录；`-a <agent>` 指定客户端，`-s <技能名>` 只装指定的一个（例如 `-s ai-crawler-audit`），不写就装全部六个。
 - 默认用符号链接指向安装源。Windows 未开启开发者模式、或环境不允许创建符号链接时加 `--copy` 改成复制；不放心链接也建议加。
 - 只检查这个仓库有哪几个技能，不安装：`npx skills add Fangx-AI/geo-doctor --list`。
 
-**核验到哪一步**：2026-11-16 用 `skills@1.9.0` 对本地检出执行 `--list`，识别到 1 个技能 `geo-doctor`。这一步证明 `SKILL.md` 的 frontmatter 能被严格 YAML 解析器读到（此前 description 未加引号，其中 `(generative engine optimization): use when` 含冒号加空格，客户端会把整行当成嵌套映射并**静默跳过整个技能**）。具体客户端装完是否触发、能否读 references，仍按下表实测，不因为 `--list` 通过就记为安装成功。
+**核验到哪一步**：2026-11-16 用 `skills@1.9.0` 对本地检出执行 `--list`，**识别到 6 个技能**：`ai-crawler-audit`、`ai-visibility`、`ai-content-writer`、`llms-txt`、`geo-publish`、`geo-doctor`。这一步证明每个 `SKILL.md` 的 frontmatter 能被严格 YAML 解析器读到（此前 description 未加引号，其中 `(generative engine optimization): use when` 含冒号加空格，客户端会把整行当成嵌套映射并**静默跳过整个技能**；现在每个 description 都是单引号标量，且 `test/skill.test.mjs` 会按同一套规则复查）。具体客户端装完是否触发、能否读 references，仍按下表实测，不因为 `--list` 通过就记为安装成功。
 
 ## 各平台步骤
 
@@ -66,20 +66,20 @@ npx skills add Fangx-AI/geo-doctor -g
 在对话中发送：
 
 ```text
-$skill-installer 请从 Fangx-AI/geo-doctor 安装 skills/geo-doctor，保留完整目录。
+$skill-installer 请从 Fangx-AI/geo-doctor 安装 skills/ai-crawler-audit，保留完整目录。
 ```
 
-也可手动把完整文件夹复制到 `~/.agents/skills/geo-doctor/`；仓库内使用可放在 `.agents/skills/geo-doctor/`。`~` 是运行 Codex 的环境的用户主目录，Windows 原生环境和 WSL 的目录分别记录。未识别时重启会话，在 `/skills` 中查看，显式触发可用 `$geo-doctor`。依据：[官方技能文档](https://learn.chatgpt.com/docs/build-skills)。这里的文件路径不代表手机 ChatGPT 的安装路径。
+把 `ai-crawler-audit` 换成你要的技能名（`ai-visibility`、`ai-content-writer`、`llms-txt`、`geo-publish`、`geo-doctor`），逐个发送即可装多个。也可手动把完整文件夹复制到 `~/.agents/skills/<技能名>/`；仓库内使用可放在 `.agents/skills/<技能名>/`。`~` 是运行 Codex 的环境的用户主目录，Windows 原生环境和 WSL 的目录分别记录。未识别时重启会话，在 `/skills` 中查看，显式触发可用 `$<技能名>`。依据：[官方技能文档](https://learn.chatgpt.com/docs/build-skills)。这里的文件路径不代表手机 ChatGPT 的安装路径。
 
 ### Kimi Code
 
-将完整文件夹复制到 `~/.kimi-code/skills/geo-doctor/`；配置过 `KIMI_CODE_HOME` 时使用该目录下的 `skills/geo-doctor/`。官方也支持共享目录 `~/.agents/skills/`，选择一种位置即可，避免同名副本混淆。新开会话后先测试自动触发，失败再尝试 `/skill:geo-doctor` 并记录两种结果。依据：[官方 Agent Skills 文档](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html)。
+将完整文件夹复制到 `~/.kimi-code/skills/<技能名>/`；配置过 `KIMI_CODE_HOME` 时使用该目录下的 `skills/<技能名>/`。官方也支持共享目录 `~/.agents/skills/`，选择一种位置即可，避免同名副本混淆。新开会话后先测试自动触发，失败再尝试 `/skill:<技能名>` 并记录两种结果。依据：[官方 Agent Skills 文档](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html)。
 
 ### WorkBuddy
 
 先尝试上面的对话安装提示词，记录实际动作。桌面端也可用“技能 → 添加技能 → 上传技能”导入本地技能包并启用，依据：[官方技能说明](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Skills-Market)。官方说明存在导入能力，但本项目 zip 的目录结构和脚本执行仍待实测。
 
-**实测 2026-10-14～15（WorkBuddy Windows 桌面端）**：在对话里发送 README 的一句话安装提示后，WorkBuddy 自动把完整目录装到 `C:\Users\<用户名>\.workbuddy\skills\geo-doctor`（用户级），SKILL.md、LICENSE、references/、assets/、scripts/ 齐全；它还自行做了安全检查，并运行 `geo-audit.mjs --version` 冒烟通过。随后在同一会话发送"帮我做 GEO"，它加载 geo-doctor，按第 0 步问诊提问（第一问为诊断对象类型：软件/App、网站、小程序、实体产品、其他），没有编造产品资料。注意：刚装好时技能列表尚未刷新，它是直接读取磁盘上的 SKILL.md；新会话下的自动触发、references/assets 读取仍待补测。结论：对话安装成功，同会话可用。
+**实测 2026-10-14～15（WorkBuddy Windows 桌面端）**：在对话里发送 README 的一句话安装提示后，WorkBuddy 自动把完整目录装到 `C:\Users\<用户名>\.workbuddy\skills\geo-doctor`（用户级），SKILL.md、LICENSE、references/、assets/、scripts/ 齐全；它还自行做了安全检查，并运行 `geo-audit.mjs --version` 冒烟通过。随后在同一会话发送"帮我做 GEO"，它加载 geo-doctor，按第 0 步问诊提问（第一问为诊断对象类型：软件/App、网站、小程序、实体产品、其他），没有编造产品资料。注意：刚装好时技能列表尚未刷新，它是直接读取磁盘上的 SKILL.md；新会话下的自动触发、references/assets 读取仍待补测。结论：对话安装成功，同会话可用。**注：这条记录早于 2026-11-16 的技能拆分，当时仓库里只有 `geo-doctor` 一个技能；拆分后请按技能名逐个安装并重新实测。**
 
 手机/小程序单独记录：[官方移动端说明](https://www.codebuddy.cn/docs/workbuddymini/features/Attachments-and-Skills)介绍了将 SkillHub 安装指令粘贴到对话的方式；这不代表本项目已上架 SkillHub，也不能推断任意 GitHub 链接都能安装。
 
@@ -102,7 +102,7 @@ $skill-installer 请从 Fangx-AI/geo-doctor 安装 skills/geo-doctor，保留完
 1. **记录环境**：日期、设备系统、客户端版本、入口/模式、技能 tag 或 commit、安装方式。保存实际安装路径、列表截图或日志。
 2. **测试自动触发**：新开对话，只发送“帮我做 GEO”。符合流程的表现是询问产品名/网址、目标 AI、目标用户，最多 3 个问题，不编造产品资料。记录是否确实加载本技能；问了类似问题本身不是加载证据。
 3. **测试显式触发**：自动触发失败时用该平台的技能选择方式或“使用 GEO 医生”。分别记录，不用显式成功替代自动触发结果。
-4. **测试资源读取**：要求实际打开 `references/04-sampling.md` 和 `assets/runs.csv`，提供读取路径、前者小节标题和后者完整表头。将输出与本次安装版本的文件逐项对照，不仅看模型自报“能读取”。
+4. **测试资源读取**：要求实际打开 `skills/ai-visibility/references/sampling.md` 和 `skills/ai-visibility/assets/runs.csv`（装的是其他技能时换成它自己的 references 与 assets），提供读取路径、前者小节标题和后者完整表头。将输出与本次安装版本的文件逐项对照，不仅看模型自报“能读取”。
 5. **测试输出与能力限制**：不提供真实产品资料时，应等待补充。无写文件能力应提供带文件名的待保存内容；无命令执行能力不能伪造网站评分。脚本可用时可运行 `node <技能绝对路径>/scripts/geo-audit.mjs --help`，只验证可执行，不把它当网站体检结果。
 6. **测试新会话可用性**：新开任务检查是否仍能选择技能。官方要求每任务重新添加的平台按要求添加，并记录其作用范围；这与一次上传附件只能在当前对话读取不同。
 

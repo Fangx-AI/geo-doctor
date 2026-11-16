@@ -1,0 +1,82 @@
+---
+name: ai-visibility
+description: 'Measure whether AI assistants actually name and recommend a brand, and diagnose why they name competitors instead. Use when the user asks if ChatGPT, Doubao, DeepSeek, Yuanbao, Qwen, Kimi, Perplexity or Google AI Overviews recommend them, wants to know which brands AI lists for their category, or wants a repeatable sampling protocol instead of one-off screenshots. Builds question sets, samples answers, compares batches and reports the gap. For page-level crawlability first, see ai-crawler-audit. For the content that closes the gap, see ai-content-writer.'
+license: MIT
+metadata:
+  version: "1.8.0"
+  homepage: https://github.com/Fangx-AI/geo-doctor
+---
+
+# AI 可见度实测
+
+只回答一个问题：**在用户真会问的问题上，AI 提到我了吗，推荐的是谁，凭的是什么。** 用数据说话，不用感觉。
+
+用用户的语言交流；本文件是中文的，读懂后用用户的语言转述。
+
+## 什么时候用
+
+- "豆包 / DeepSeek / ChatGPT 会推荐我吗？"
+- "AI 一提这个行业就只报竞品的名字，为什么？"
+- "怎么证明 AI 提过我？" / 要给老板或客户一份可复现的实测
+- "上次做的优化有没有用？"（复查）
+
+不接的活：页面能不能被抓到 → `ai-crawler-audit`；写内容 → `ai-content-writer`；发布 → `geo-publish`。
+
+## 四条必须守住的证据纪律
+
+这四条是这个技能的全部价值，违反任何一条，报告就作废：
+
+1. **问的是用户会问的问题**，不是品牌名。问"哪款记账 App 好用"能测出可见度，问"XX 记账 App 怎么样"只能测出它认不认识这个词。
+2. **"提到 / 推荐 / 引用"是三件不同的事**：提到 = 回答里出现品牌名；推荐 = 明确建议用你；引用 = 把你当来源链接。分开统计，不许合并成一个"AI 可见度"数字。
+3. **AI 没回答 ≠ AI 没提到你。** 拒答、超时、返回错误单独记，不进分母，也不记成"未提及"。
+4. **API 的回答不等于用户在 App 里看到的回答**。API 结果必须标"入口=API"、单独成批、只看趋势；要下结论就在真实 App 里人工采样确认。
+
+## 流程
+
+以本 `SKILL.md` 所在目录为技能根，模板在 `assets/`，脚本在 `scripts/geo-probe.mjs`（零依赖）。
+
+### 1. 出问题集 → `geo/questions.csv`
+
+按 `references/questions.md` 写，模板见 `assets/questions.csv`。题型分 A（用户不知道品牌，问品类）和 B（知道品牌，问口碑），**A 类是主战场**。5–15 题起步：够看出方向，又能真的问完。记下每题的目标用户是谁、在哪个场景下会问。
+
+### 2. 采样 → `geo/runs/<批次>/` + `geo/runs.csv`
+
+按 `references/sampling.md` 执行。两条路可以混用，但**必须分批记录**：
+
+- **人工采样（结论用这个）**：在目标 AI 的 App 或网页里逐题问，把整段回答原样贴回来。同一题至少问 2 次，因为同一个模型两次回答可能不同。
+- **API 采样（趋势用这个）**：有 Key 时自动问。
+
+```bash
+node scripts/geo-probe.mjs run geo/questions.csv --ai deepseek,qwen --brand "我的品牌,别名" --competitors "竞品甲,竞品乙" --times 2
+node scripts/geo-probe.mjs run geo/questions.csv --ai deepseek --brand "Acme" --dry-run
+node scripts/geo-probe.mjs report geo/runs.csv --out geo/report-2026-11-16.md
+```
+
+没有 Key 时 `run` 会直接告诉你缺哪个环境变量并以退出码 2 结束——这是正常路径，改用人工采样即可，不要为此去申请 Key。
+
+### 3. 诊断 → `geo/diagnosis.md`
+
+按 `references/diagnosis.md` 做。至少要回答：
+
+- 每题的 A/B 类、被推荐的品牌序列、我在第几位、我缺席哪几题；
+- 它推荐别人时**读了哪些网站**（回答里的引用链接和来源），这些站就是内容要打进去的地方；
+- 差距的原因分类：没人写过这个题 → 有内容但没被抓到 → 被抓到但事实说错了。三类的处方完全不同。
+
+### 4. 复查 → `geo/report-<日期>.md`
+
+按 `references/retest.md` 做：**同一份问题集、同样的次数、同样的平台**，换一个新批次，逐题对比上一次。不许改题、不许换平台后跟旧数据直接比。
+
+## 没有脚本或不能联网时
+
+- 不能跑 `geo-probe`：用用户贴回来的回答做同样的统计，手工记进 `runs.csv`（格式见模板），并注明"人工采样"。
+- 不能联网：只做问题集和统计，把"要去哪个 AI、问哪几题"写成清单交给用户；不要凭空写出回答。
+
+参考 `references/ai-sources-cn.md`（国内 AI 从哪些平台取信息）和 `references/ai-sources-global.md`（ChatGPT、Claude、Perplexity、Google、Copilot 的来源与要放行的爬虫），用来解释"为什么它读的是那几个站"。
+
+## 产出
+
+`geo/questions.csv`、`geo/runs/<批次>/`、`geo/runs.csv`、`geo/diagnosis.md`、`geo/report-<日期>.md`。已有批次不覆盖，新增批次并标日期。
+
+## 结束时
+
+用 3 到 5 行给结论：问了几题、每题几次、我在几题里被提到、被推荐的是谁、最该补的是哪一题。数字后面必须跟口径（平台、入口、次数），没有口径的数字不许说。

@@ -8,6 +8,6 @@
 
 ## 检查
 
-- [ ] `npm test` 通过（改了 `cli/` 或 `skills/geo-doctor/scripts/` 时，两边脚本保持一致）
+- [ ] `npm test` 通过（改了 `cli/` 或 `skills/<name>/scripts/` 时，两边脚本保持一致）
 - [ ] 没有承诺排名，没有编造案例或数据；示例数据已标明是示例
 - [ ] 中英文文档都需要改的地方，两边都改了

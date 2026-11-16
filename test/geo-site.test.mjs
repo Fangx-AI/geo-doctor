@@ -115,7 +115,7 @@ test('parseFactCard reads sections, inline and block lists, comments and the mai
 });
 
 test('the bundled fact-card template parses, and nothing in it is confirmed', () => {
-  const facts = loadFacts(parseFactCard(readFileSync('skills/geo-doctor/assets/fact-card.yaml', 'utf8')));
+  const facts = loadFacts(parseFactCard(readFileSync('skills/ai-content-writer/assets/fact-card.yaml', 'utf8')));
   assert.ok(facts.entries.length > 20);
   assert.equal(facts.confirmed.length, 0);
 });
@@ -200,7 +200,7 @@ test('build: confirmed, clean drafts become articles; others are left out; stale
 
 test('build refuses a card without a confirmed name and summary', async () => {
   const d = tmp();
-  writeFileSync(join(d, 'card.yaml'), readFileSync('skills/geo-doctor/assets/fact-card.yaml', 'utf8'));
+  writeFileSync(join(d, 'card.yaml'), readFileSync('skills/ai-content-writer/assets/fact-card.yaml', 'utf8'));
   const q = quiet();
   assert.equal(await main(['build', '--facts', join(d, 'card.yaml'), '--out', join(d, 'site'), '--lang', 'zh'], q), 1);
   assert.match(q.lines.join('\n'), /B01、B03/);

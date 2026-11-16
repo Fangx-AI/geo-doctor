@@ -69,10 +69,38 @@ for (const name of skills) {
   });
 }
 
-for (const script of ['geo-audit.mjs', 'geo-publish.mjs', 'geo-probe.mjs', 'geo-site.mjs', 'geo-autopilot.mjs']) {
-  test(`bundled ${script} matches cli/${script}`, () => {
-    assert.equal(readFileSync(`skills/geo-doctor/scripts/${script}`, 'utf8'), readFileSync(`cli/${script}`, 'utf8'),
-      `run: cp cli/${script} skills/geo-doctor/scripts/`);
+// Each skill bundles only the script its own job needs, plus the proxy shim every
+// CLI imports. Both must stay byte-identical to cli/, or the skill quietly ships a
+// different tool than the CLI users install.
+const BUNDLED = {
+  'ai-crawler-audit': ['geo-audit.mjs'],
+  'ai-visibility': ['geo-probe.mjs'],
+  'llms-txt': ['geo-site.mjs'],
+  'geo-publish': ['geo-publish.mjs'],
+  'geo-doctor': ['geo-autopilot.mjs'],
+};
+
+for (const [skill, scripts] of Object.entries(BUNDLED)) {
+  for (const script of [...scripts, 'proxy.mjs']) {
+    test(`bundled ${skill}/${script} matches cli/${script}`, () => {
+      assert.equal(readFileSync(`skills/${skill}/scripts/${script}`, 'utf8'), readFileSync(`cli/${script}`, 'utf8'),
+        `run: cp cli/${script} skills/${skill}/scripts/`);
+    });
+  }
+}
+
+// A skill cannot link outside its own directory, so the shared references are copied.
+// Copies drift; this is the guard.
+for (const shared of ['ai-sources-cn.md', 'ai-sources-global.md', 'compliance.md']) {
+  test(`every copy of ${shared} is identical`, () => {
+    const copies = [];
+    for (const name of skills) {
+      const file = join(ROOT, name, 'references', shared);
+      if (existsSync(file)) copies.push([name, readFileSync(file, 'utf8').replace(/\r\n/g, '\n')]);
+    }
+    assert.ok(copies.length >= 2, `${shared} should be shared by at least two skills`);
+    const [, first] = copies[0];
+    for (const [name, text] of copies) assert.equal(text, first, `${name}/references/${shared} drifted from ${copies[0][0]}`);
   });
 }
 
@@ -83,8 +111,15 @@ test('each skill ships its own license file for the standalone zip', () => {
   }
 });
 
+test('every skill has a references directory with at least one file', () => {
+  for (const name of skills) {
+    const files = readdirSync(join(ROOT, name, 'references'));
+    assert.ok(files.length > 0, `${name}/references is empty`);
+  }
+});
+
 test('every fact-card entry carries an id, a source or address, and a status', () => {
-  const yaml = readFileSync('skills/geo-doctor/assets/fact-card.yaml', 'utf8');
+  const yaml = readFileSync('skills/ai-content-writer/assets/fact-card.yaml', 'utf8');
   const entries = yaml.split(/\n  - /).slice(1).map((e) => e.split(/\n(?=\S)/)[0]);
   assert.ok(entries.length >= 20);
   for (const e of entries) {

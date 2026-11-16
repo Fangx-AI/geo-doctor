@@ -24,16 +24,35 @@ function listScripts(dir) {
     .map((f) => `${dir}/${f}`);
 }
 
+// Every skill under skills/ is published on its own, so each one carries the version.
+function listSkills() {
+  return readdirSync(join(ROOT, 'skills'), { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
+}
+
 // One (version) group per pattern. The bundled copies are compared byte for byte
 // against cli/ by test/skill.test.mjs, so both sides are rewritten here.
 // cli/proxy.mjs is a shim with no VERSION export, so scanned files are optional:
 // a missing export means "not a version carrier", not drift.
 const TARGETS = [
   ...listScripts('cli').map((file) => ({ file, re: /(export const VERSION = ')([^']+)(';)/, optional: true })),
-  ...listScripts('skills/geo-doctor/scripts').map((file) => ({ file, re: /(export const VERSION = ')([^']+)(';)/, optional: true })),
-  { file: 'skills/geo-doctor/SKILL.md', re: /(^ {2}version: ")([^"]+)(")/m },
+  ...listSkills().flatMap((skill) => {
+    let bundled = [];
+    try {
+      bundled = listScripts(`skills/${skill}/scripts`);
+    } catch {
+      // a skill without scripts still carries the version in its frontmatter
+    }
+    return [
+      ...bundled.map((file) => ({ file, re: /(export const VERSION = ')([^']+)(';)/, optional: true })),
+      { file: `skills/${skill}/SKILL.md`, re: /(^ {2}version: ")([^"]+)(")/m },
+    ];
+  }),
   { file: '.claude-plugin/plugin.json', re: /("version": ")([^"]+)(")/ },
   { file: '.claude-plugin/marketplace.json', re: /("version": ")([^"]+)(")/ },
+  { file: '.codex-plugin/plugin.json', re: /("version": ")([^"]+)(")/ },
 ];
 
 function packageVersion() {
