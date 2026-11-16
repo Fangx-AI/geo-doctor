@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # 下面四类链接不参与"是否失效"的判断，正文里照常保留：
+      # 这个检查只回答一个问题：有没有打不开的链接。下面这些情况不算打不开：
       # - robots.txt：4xx / 405 / 307 本身就是数据，docs/ai-crawler-leaderboard.md
       #   脚注 ¹ 把"没有 robots.txt"按 RFC 9309 视为不限制。而且同一地址对不同客户端
       #   返回不同状态（2026-11-16 核验：byd.com 对 lychee 报 404，普通 GET 返回
@@ -21,21 +21,29 @@ jobs:
       # - player.vimeo.com：401 是 embed 域名限制，视频只在原文页面里播放。
       # - webflow.com 这两篇：页面本身返回 200（2026-11-16 核验），lychee 报的
       #   HTTP/2 protocol error 是它的 HTTP 客户端与该站 HTTP/2 实现的兼容问题。
-      # - nlp.stanford.edu：《Introduction to Information Retrieval》的官方站点，
-      #   docs/basics.md 的进阶选读里引着它。2026-11-16 从 runner 取不到：超时 30 秒
-      #   和 60 秒各跑一次都是 timeout，另外两个第三方代理取也返回 520/522。但 Wayback
-      #   在 2026-08-19 还抓到 200，说明站点本身在，是这类网络到不了它。链接因此保留，
-      #   只是不参与自动检查；这个站恢复可访问后，删掉下面那行 --exclude 即可。
+      #
+      # --accept-timeouts：超时不等于死链。打开后请求超时按通过处理，真正的 404 / 5xx
+      # 仍然会让这次检查失败。加它是因为 nlp.stanford.edu（docs/basics.md 引的
+      # 《Introduction to Information Retrieval》官方站）：2026-11-16 在 runner 上
+      # 30 秒和 60 秒都超时，两个第三方代理取也返回 520/522，但 Wayback 在 2026-08-19
+      # 还抓到 200 —— 站点在，是这类网络到不了它。把整个域名 exclude 会连它真的变 404
+      # 也一起放过；按超时处理才是准的。
+      #
+      # --max-retries / --retry-wait-time：lychee 默认重试间隔只有 1 秒。中文站点
+      # （虎嗅、36 氪这类）偶尔对境外 IP 回 502，隔几秒再看就正常（2026-11-16 核验：
+      # huxiu.com 某篇文章 runner 报 502，同一分钟本机 GET 两次都是 200）。重试 4 次、
+      # 间隔 5 秒，让偶发 5xx 自己过去，而不是每月报一次、点开又查无此事。
       - id: lychee
         uses: lycheeverse/lychee-action@v2
         with:
           args: >-
-            --no-progress --max-retries 2 --timeout 30 --accept 200,206,403,429
+            --no-progress --timeout 30 --accept 200,206,403,429
+            --accept-timeouts
+            --max-retries 4 --retry-wait-time 5
             --exclude 'robots\.txt$'
             --exclude '^https://player\.vimeo\.com/'
             --exclude '^https://webflow\.com/blog/landing-pages-vs-websites$'
             --exclude '^https://webflow\.com/blog/ai-design-tools$'
-            --exclude '^https?://nlp\.stanford\.edu/'
             './**/*.md'
           output: ./lychee/out.md
           fail: false
