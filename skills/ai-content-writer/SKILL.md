@@ -1,6 +1,6 @@
 ---
 name: ai-content-writer
-description: 'Write pages that AI assistants can quote correctly, starting from a fact card instead of from memory. Use when the user needs content that gets cited, says AI describes the product wrongly or confuses it with a competitor, asks what to write so ChatGPT, Perplexity or Doubao mention them, or needs a page rewritten into answer-shaped blocks with sources. Builds the fact card first, then drafts one article per gap, using only confirmed facts. For measuring whether it worked, see ai-visibility. For publishing, see geo-publish.'
+description: 'Write pages that AI assistants can quote correctly, starting from a fact card instead of from memory. Use when the user needs content that gets cited, says AI describes the product wrongly or confuses it with a competitor, has the website, decks and sales scripts telling different stories and wants one confirmed fact card as the single source of truth, asks what to write so ChatGPT, Perplexity or Doubao mention them, needs a page rewritten into answer-shaped blocks with sources, or asks which claims are off limits in a regulated industry such as finance, medical, education or advertising. Builds the fact card first, then drafts one article per gap, using only confirmed facts. For turning that card into site files, see llms-txt. For measuring whether it worked, see ai-visibility. For publishing, see geo-publish.'
 license: MIT
 metadata:
   version: "1.8.0"

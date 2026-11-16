@@ -1,6 +1,6 @@
 ---
 name: llms-txt
-description: 'Build the files AI reads first: llms.txt, facts.json, robots.txt, sitemap.xml and a static fact site generated from a fact card. Use when the user asks for llms.txt, wants a site agents can read without JavaScript, needs machine-readable facts about a product, or wants GitHub Pages to publish an AI-readable fact sheet from confirmed facts only. Generates the site, refuses unconfirmed facts, and explains what llms.txt can and cannot do. For crawl diagnostics, see ai-crawler-audit. For prose that gets cited, see ai-content-writer.'
+description: 'Build the files AI reads first: llms.txt, facts.json, robots.txt, sitemap.xml and a static fact site generated from a fact card. Use when the user asks for llms.txt, wants a site agents can read without JavaScript, needs machine-readable facts about a product as files, or wants GitHub Pages to publish an AI-readable fact sheet from confirmed facts only. Starts from a fact card that already exists; reconciling scattered sources into that card is ai-content-writer. Generates the site, refuses unconfirmed facts, and explains what llms.txt can and cannot do. For crawl diagnostics, see ai-crawler-audit. For prose that gets cited, see ai-content-writer.'
 license: MIT
 metadata:
   version: "1.8.0"
