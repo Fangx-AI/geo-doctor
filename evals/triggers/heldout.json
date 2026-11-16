@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "note": "门槛集：不参与调 description。只有当开发集和门槛集的分数都过线，才算这次改动有效。改 description 之后先跑开发集，再跑这里，两边的分数都记下来。",
+  "cases": [
+    { "id": "audit-h1", "expect": "ai-crawler-audit", "prompt": "客户说在 Perplexity 里搜我们的产品名什么都搜不到，是不是 robots.txt 写错了" },
+    { "id": "audit-h2", "expect": "ai-crawler-audit", "prompt": "X-Robots-Tag: noindex 会影响 AI 抓取吗" },
+    { "id": "audit-h3", "expect": "ai-crawler-audit", "prompt": "我在 CI 里想加一步，页面 AI 可读性掉到 80 分以下就让构建失败" },
+    { "id": "audit-h4", "expect": "ai-crawler-audit", "prompt": "can AI agents read my docs site, or does the JS shell hide everything" },
+
+    { "id": "vis-h1", "expect": "ai-visibility", "prompt": "想量化一下我们在 AI 回答里的曝光，同批问题问五遍，统计口径怎么写" },
+    { "id": "vis-h2", "expect": "ai-visibility", "prompt": "AI Overviews 里这个品类列了六个品牌，我们需要知道自己排不排得上" },
+    { "id": "vis-h3", "expect": "ai-visibility", "prompt": "怎么证明上个月做的内容有用，光截图不算吧" },
+    { "id": "vis-h4", "expect": "ai-visibility", "prompt": "which competitors does DeepSeek name when users ask for tools like ours" },
+
+    { "id": "write-h1", "expect": "ai-content-writer", "prompt": "AI 说我们不支持私有化部署，其实支持，写篇东西澄清" },
+    { "id": "write-h2", "expect": "ai-content-writer", "prompt": "帮我把散落在官网和销售文档里的参数整理成一份唯一事实源" },
+    { "id": "write-h3", "expect": "ai-content-writer", "prompt": "写十篇稿子，但每篇都要有真实出处，不许编客户案例" },
+
+    { "id": "llms-h1", "expect": "llms-txt", "prompt": "有没有一种文件能让大模型直接读到我们的产品清单，不用去解析网页" },
+    { "id": "llms-h2", "expect": "llms-txt", "prompt": "生成站点的时候它说事实没确认就不发，这个怎么处理" },
+
+    { "id": "pub-h1", "expect": "geo-publish", "prompt": "同样的内容要发到四个平台，格式都不一样，能不能一次生成" },
+    { "id": "pub-h2", "expect": "geo-publish", "prompt": "发布记录我想留一份 CSV，包括链接和时间" },
+
+    { "id": "doc-h1", "expect": "geo-doctor", "prompt": "有个新客户想做 AI 推荐优化，我该怎么接这个活" },
+    { "id": "doc-h2", "expect": "geo-doctor", "prompt": "整套流程走一遍大概要多久，每一步要客户提供什么" },
+
+    { "id": "none-h1", "expect": null, "prompt": "帮我把会议录音转成文字" },
+    { "id": "none-h2", "expect": null, "prompt": "这段 CSS 为什么在 Safari 里不生效" },
+    { "id": "none-h3", "expect": null, "prompt": "给我讲讲梯度下降的原理" },
+    { "id": "none-h4", "expect": null, "prompt": "帮我订明天下午去上海的高铁" }
+  ]
+}

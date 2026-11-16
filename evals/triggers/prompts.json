@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "note": "开发集：调 description 用的用例。门槛集在 heldout.json，改 description 时不要按它调。expect 必须是 skills/ 下的目录名，或 null 表示一个都不该触发。",
+  "cases": [
+    { "id": "audit-01", "expect": "ai-crawler-audit", "prompt": "为什么 ChatGPT 从来不提我的网站？" },
+    { "id": "audit-02", "expect": "ai-crawler-audit", "prompt": "我的站是不是把 GPTBot 挡在外面了" },
+    { "id": "audit-03", "expect": "ai-crawler-audit", "prompt": "帮我看看 robots.txt 有没有拦住 ClaudeBot 和 PerplexityBot" },
+    { "id": "audit-04", "expect": "ai-crawler-audit", "prompt": "我的页面是 Vue 单页应用，AI 爬虫能读到正文吗" },
+    { "id": "audit-05", "expect": "ai-crawler-audit", "prompt": "给这个网址做个 AI 可读性体检：https://example.com/pricing" },
+    { "id": "audit-06", "expect": "ai-crawler-audit", "prompt": "Cloudflare 的 WAF 会不会顺手把 AI 爬虫也拦掉" },
+
+    { "id": "vis-01", "expect": "ai-visibility", "prompt": "豆包里搜我们这类产品，推荐的是竞品，有提到我吗" },
+    { "id": "vis-02", "expect": "ai-visibility", "prompt": "AI 现在到底提不提我们公司" },
+    { "id": "vis-03", "expect": "ai-visibility", "prompt": "帮我设计一套问题，测 AI 会不会推荐我" },
+    { "id": "vis-04", "expect": "ai-visibility", "prompt": "同一批问题问两次结果不一样，推荐率该怎么算" },
+    { "id": "vis-05", "expect": "ai-visibility", "prompt": "竞品被 AI 推荐了我没有，缺口在哪" },
+    { "id": "vis-06", "expect": "ai-visibility", "prompt": "两周后再测一遍，前后对比怎么写" },
+
+    { "id": "write-01", "expect": "ai-content-writer", "prompt": "AI 把我的价格说错了，我该写点什么纠正" },
+    { "id": "write-02", "expect": "ai-content-writer", "prompt": "帮我整理一份产品事实卡，现在官网、公众号、销售话术三处说法都不一致" },
+    { "id": "write-03", "expect": "ai-content-writer", "prompt": "把这些缺口题都写成文章，只用确认过的事实" },
+    { "id": "write-04", "expect": "ai-content-writer", "prompt": "写一篇和竞品的对比页，不要编造用户评价" },
+    { "id": "write-05", "expect": "ai-content-writer", "prompt": "我们这行广告有限制，文案里哪些话不能说" },
+
+    { "id": "llms-01", "expect": "llms-txt", "prompt": "帮我做一个 llms.txt" },
+    { "id": "llms-02", "expect": "llms-txt", "prompt": "想让 AI 不执行 JS 也能读到我的产品信息" },
+    { "id": "llms-03", "expect": "llms-txt", "prompt": "网站根目录该放哪些给 AI 读的文件" },
+    { "id": "llms-04", "expect": "llms-txt", "prompt": "用事实卡生成一个静态事实站，放到 GitHub Pages" },
+    { "id": "llms-05", "expect": "llms-txt", "prompt": "facts.json 是什么，和 llms.txt 是什么关系" },
+
+    { "id": "pub-01", "expect": "geo-publish", "prompt": "文章写好了，发哪些平台最容易被 AI 引用" },
+    { "id": "pub-02", "expect": "geo-publish", "prompt": "同一个稿子帮我改成知乎和公众号能直接粘贴的格式" },
+    { "id": "pub-03", "expect": "geo-publish", "prompt": "官网是静态站，能自动发布吗" },
+    { "id": "pub-04", "expect": "geo-publish", "prompt": "发出去以后怎么记录哪篇发到了哪个平台" },
+    { "id": "pub-05", "expect": "geo-publish", "prompt": "WordPress 站点能不能直接发" },
+
+    { "id": "doc-01", "expect": "geo-doctor", "prompt": "帮我做 GEO" },
+    { "id": "doc-02", "expect": "geo-doctor", "prompt": "想让 AI 推荐我的 SaaS，从哪开始" },
+    { "id": "doc-03", "expect": "geo-doctor", "prompt": "我们的小程序在 AI 里搜不到，整体该怎么做" },
+    { "id": "doc-04", "expect": "geo-doctor", "prompt": "能不能每周自动帮我复查一次" },
+    { "id": "doc-05", "expect": "geo-doctor", "prompt": "做到一半了，不知道下一步该干什么" },
+
+    { "id": "none-01", "expect": null, "prompt": "帮我写一首关于秋天的诗" },
+    { "id": "none-02", "expect": null, "prompt": "把这个 Word 文档转成 PDF" },
+    { "id": "none-03", "expect": null, "prompt": "Python 里怎么读 CSV 文件" },
+    { "id": "none-04", "expect": null, "prompt": "帮我把这张图裁成 16:9" },
+    { "id": "none-05", "expect": null, "prompt": "我们公司团建想找个民宿，推荐几个" }
+  ]
+}
