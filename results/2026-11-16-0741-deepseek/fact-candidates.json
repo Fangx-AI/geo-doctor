@@ -1,0 +1,375 @@
+{
+  "done": {
+    "README.md": "50cc23429f30f1b8"
+  },
+  "items": [
+    {
+      "cid": "c1",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": "F02",
+      "section": "核心能力",
+      "fields": {
+        "能力": "用 API 自动问 DeepSeek、千问、Kimi、豆包、ChatGPT 等，每条回答都存档",
+        "限制": "需要 API Key"
+      },
+      "quote": "有 API Key 时也可以自动问 DeepSeek、千问、Kimi、豆包、ChatGPT 等，每条回答都存档",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "用 API 自动问 DeepSeek、通义千问、Kimi、豆包、元宝、ChatGPT、Perplexity、Gemini、Claude，统计谁被推荐"
+        },
+        {
+          "field": "限制",
+          "current": "API 回答不登录、多数不联网，可能和 App 里不同；重要结论要在 App 里人工确认"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c2",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": "C01",
+      "section": "使用条件",
+      "fields": {
+        "项目": "支持平台",
+        "内容": "Claude Code、Codex、Kimi Code、WorkBuddy 等能安装技能的 AI 助手"
+      },
+      "quote": "在 Claude Code、Codex、Kimi Code、WorkBuddy 等能安装技能的 AI 助手里，新开一个对话，发送：",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "Claude Code、Codex、Kimi Code、支持上传技能包的 AI 客户端、Node.js 18 及以上的命令行"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c3",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": "S01",
+      "section": "数据与安全",
+      "fields": {
+        "项目": "数据存储位置",
+        "内容": "数据就是 geo/ 文件夹"
+      },
+      "quote": "不用装数据库，数据就是 `geo/` 文件夹；默认只在你自己电脑上打开。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "所有数据都是你项目里 geo/ 文件夹的普通文件，没有数据库，不上传到 GEO 医生的服务器（GEO 医生没有服务器）"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c4",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": "S02",
+      "section": "数据与安全",
+      "fields": {
+        "项目": "数据上传",
+        "内容": "体检脚本零依赖，只访问你给的网址和它的 robots.txt、sitemap.xml，不向第三方上传数据，不读密钥"
+      },
+      "quote": "**安全吗？** 体检脚本零依赖，只访问你给的网址和它的 robots.txt、sitemap.xml，不向第三方上传数据，不读密钥。",
+      "conflict": [
+        {
+          "field": "项目",
+          "current": "密钥"
+        },
+        {
+          "field": "内容",
+          "current": "API Key 和 WordPress 密码只从环境变量读取，不写进命令和文件"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c5",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": "F02",
+      "section": "核心能力",
+      "fields": {
+        "能力": "API 回答不登录、多数不联网，和 App 里可能不一样",
+        "限制": "自动采样适合高频看趋势，重要结论用 App 里的人工采样确认；AI 每次回答都不一样，所以每题问 2 次，看出现率而不是单次排名"
+      },
+      "quote": "API 回答不登录、多数不联网，和 App 里可能不一样。自动采样适合高频看趋势，重要结论用 App 里的人工采样确认。AI 每次回答都不一样，所以每题问 2 次，看出现率而不是单次排名。",
+      "conflict": [
+        {
+          "field": "能力",
+          "current": "用 API 自动问 DeepSeek、通义千问、Kimi、豆包、元宝、ChatGPT、Perplexity、Gemini、Claude，统计谁被推荐"
+        },
+        {
+          "field": "限制",
+          "current": "API 回答不登录、多数不联网，可能和 App 里不同；重要结论要在 App 里人工确认"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c6",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": "X02",
+      "section": "明确不支持",
+      "fields": {
+        "内容": "不能保证豆包推荐；不保证排名"
+      },
+      "quote": "**能保证豆包推荐我吗？** 不能，谁都不能。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "不保证 AI 排名，不刷量，不写虚假评价"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c7",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "体检检查 7 类问题并打 0–100 分：访问与跳转、robots.txt 对 9 个 AI / 搜索爬虫的规则、防火墙是否拦 AI、noindex、canonical、正文是否在原始 HTML 里、sitemap 与结构化数据"
+      },
+      "quote": "检查 7 类问题并打 0–100 分：访问与跳转、robots.txt 对 9 个 AI / 搜索爬虫的规则、防火墙是否拦 AI、noindex、canonical、正文是否在原始 HTML 里、sitemap 与结构化数据。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c8",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "用事实卡里已确认的事实生成事实页、常见问题页、llms.txt 和结构化数据，体检 100 分；geo-site action 再写一个工作流，自动发布到 GitHub Pages"
+      },
+      "quote": "用事实卡里已确认的事实生成事实页、常见问题页、`llms.txt` 和结构化数据，体检 100 分；`geo-site action` 再写一个工作流，自动发布到 GitHub Pages。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c9",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "geo-autopilot action 写一个每周一运行的工作流：重新采样、找出竞品被推荐而你没有的题、只用已确认的事实给每道缺口写一篇稿、写疗效报告，最后开一个 PR 给你审；合并即发布"
+      },
+      "quote": "`npx -p github:Fangx-AI/geo-doctor geo-autopilot action` 写一个每周一运行的工作流：重新采样、找出竞品被推荐而你没有的题、只用已确认的事实给每道缺口写一篇稿、写疗效报告，最后开一个 PR 给你审。合并即发布，你只需要看稿、点合并。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c10",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "能批量写，但一篇对应一道 AI 没推荐你的真实问题，每个事实都要你确认过，同一内容换个说法重复发会被脚本拦下"
+      },
+      "quote": "能批量，但一篇对应一道 AI 没推荐你的真实问题，每个事实都要你确认过，同一内容换个说法重复发会被脚本拦下。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c11",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": "X01",
+      "section": "明确不支持",
+      "fields": {
+        "内容": "知乎、公众号这些第三方平台只帮你排好版，由你本人用真实账号发，因为机器批量发帖容易封号，也是监管在整治的\"GEO 投毒\""
+      },
+      "quote": "官网可以自动发；知乎、公众号这些第三方平台只帮你排好版，由你本人用真实账号发，因为机器批量发帖容易封号，也是监管在整治的\"GEO 投毒\"。",
+      "conflict": [
+        {
+          "field": "内容",
+          "current": "不会模拟登录替你发布到知乎、公众号、小红书等没有开放发布接口的平台：只排好版，由你本人点发布；有官方接口的 dev.to 可以用你自己的 Key 自动发"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c12",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "明确不支持",
+      "fields": {
+        "内容": "编造用户评价、刷量这类做法，skill 里明确拒绝"
+      },
+      "quote": "编造用户评价、刷量这类做法，skill 里明确拒绝，高风险行业另有红线（见 [合规说明](skills/geo-doctor/references/compliance.md)）。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c13",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": "C02",
+      "section": "使用条件",
+      "fields": {
+        "项目": "语言支持",
+        "内容": "支持英文和海外 AI；用英文跟它说话，它就全程用英文，写出的内容也是英文"
+      },
+      "quote": "**支持英文和海外 AI 吗？** 支持。你用英文跟它说话，它就全程用英文，写出的内容也是英文。",
+      "conflict": [
+        {
+          "field": "项目",
+          "current": "地区或语言"
+        },
+        {
+          "field": "内容",
+          "current": "中文、英文"
+        }
+      ],
+      "source": "README.md"
+    },
+    {
+      "cid": "c14",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "使用条件",
+      "fields": {
+        "项目": "海外 AI 体检重点",
+        "内容": "目标是 ChatGPT、Claude、Perplexity、Gemini、Copilot 时，体检会重点看这些 AI 的搜索爬虫有没有被挡，发布指导改用必应、Google 的收录入口和海外商家平台"
+      },
+      "quote": "目标是 ChatGPT、Claude、Perplexity、Gemini、Copilot 时，体检会重点看这些 AI 的搜索爬虫有没有被挡，发布指导改用必应、Google 的收录入口和海外商家平台。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c15",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "使用条件",
+      "fields": {
+        "项目": "聊天 App 是否可直接使用",
+        "内容": "普通聊天 App 目前装不了技能；在 WorkBuddy、Claude Code、Codex、Kimi Code 这类能装技能的助手里做诊断，采样时再去豆包、DeepSeek 里问"
+      },
+      "quote": "**豆包、DeepSeek 里能直接用吗？** 普通聊天 App 目前装不了技能。在 WorkBuddy、Claude Code、Codex、Kimi Code 这类能装技能的助手里做诊断，采样时再去豆包、DeepSeek 里问。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c16",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "使用条件",
+      "fields": {
+        "项目": "Node.js",
+        "内容": "18 以上"
+      },
+      "quote": "装了 [Node.js](https://nodejs.org/zh-cn)（18 以上）的话，一行命令检查 AI 能不能读到你的网页：",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c17",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "体检到 80 分以上，命令行最后会多给你一行徽章代码，贴到 README 或官网页脚；加 --badge geo-badge.svg 可以生成不依赖外部服务的 SVG"
+      },
+      "quote": "体检到 **80 分以上**，命令行最后会多给你一行徽章代码，贴到 README 或官网页脚，告诉访客\"AI 爬虫能读到这个网站\"。加 `--badge geo-badge.svg` 可以生成不依赖外部服务的 SVG。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c18",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "核心能力",
+      "fields": {
+        "能力": "加 --card geo-card.png，生成一张 1200×630 的分享图（本机有 Chrome 或 Edge 就能出 PNG，没有就给 SVG）；任何分数都能生成"
+      },
+      "quote": "**想晒一下？** 加 `--card geo-card.png`，生成一张 1200×630 的分享图，发朋友圈、群聊、即刻、小红书都行（本机有 Chrome 或 Edge 就能出 PNG，没有就给 SVG）。任何分数都能生成，改前改后各一张最有说服力。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c19",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "明确不支持",
+      "fields": {
+        "内容": "徽章和分享图只代表那次技术体检的结果，不代表 AI 一定会推荐这个网站"
+      },
+      "quote": "徽章和分享图只代表那次技术体检的结果，**不代表** AI 一定会推荐这个网站。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c20",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "数据与安全",
+      "fields": {
+        "项目": "体检访问范围",
+        "内容": "它会模拟 AI 爬虫的身份访问页面，用来检查防火墙有没有拦 AI，所以请只体检自己的网站"
+      },
+      "quote": "它会模拟 AI 爬虫的身份访问页面，用来检查防火墙有没有拦 AI，所以请只体检自己的网站。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c21",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "公开证据",
+      "fields": {
+        "类型": "中文网站 AI 爬虫封锁榜",
+        "地址": "docs/ai-crawler-leaderboard.md"
+      },
+      "quote": "🚧 **[中文网站 AI 爬虫封锁榜](docs/ai-crawler-leaderboard.md)**：我们读取了 97 个知名中文网站的 robots.txt。**知乎、小红书、微博、贝壳、马蜂窝都把 ChatGPT 搜索、Perplexity、Claude 搜索挡在门外**，微博还点名屏蔽了 DeepSeek、Kimi、豆包。",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c22",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "公开证据",
+      "fields": {
+        "类型": "GEO 实战手册",
+        "地址": "docs/handbook.md"
+      },
+      "quote": "GEO 医生背后的方法都写成了公开手册，每条结论附官方原文或研究出处，不装 skill 也能照着做：[打开手册 →](docs/handbook.md)",
+      "conflict": [],
+      "source": "README.md"
+    },
+    {
+      "cid": "c23",
+      "status": "new",
+      "date": "2026-11-16",
+      "id": null,
+      "section": "公开证据",
+      "fields": {
+        "类型": "给 AI 读的项目简介",
+        "地址": "llms.txt"
+      },
+      "quote": "给 AI 读的项目简介：[llms.txt](llms.txt)。",
+      "conflict": [],
+      "source": "README.md"
+    }
+  ]
+}
