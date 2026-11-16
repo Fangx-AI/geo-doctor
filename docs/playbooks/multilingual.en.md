@@ -1,6 +1,8 @@
 # 🌏 Multilingual and Going-Global GEO
 
 > [GEO Playbook](../handbook.md) › By Project › Multilingual
+>
+> **中文:** [多语言与出海 GEO](multilingual.md)
 
 **Across different countries: what can be translated, and what must be rewritten per market?**
 

@@ -1,6 +1,8 @@
 # 🌏 多语言与出海 GEO
 
 > [GEO 实战手册](../handbook.md) › 按项目实战 › 多语言
+>
+> **English:** [Multilingual and Going-Global GEO](multilingual.en.md)
 
 **面向不同国家：哪些能翻译，哪些必须按市场重写？**
 
