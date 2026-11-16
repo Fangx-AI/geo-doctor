@@ -56,7 +56,7 @@ node <skill 目录的绝对路径>/scripts/geo-audit.mjs https://用户网址 --
 
 ## 小程序
 
-- 🟢 小程序页面能否被微信搜索收录，由 `sitemap.json` 控制（[官方文档](https://developers.weixin.qq.com/miniprogram/dev/framework/sitemap.html)），这只影响微信自己的搜索。
+- 🟢 小程序页面能否被微信搜索收录，由小程序根目录的 `sitemap.json`（`rules` 里的 `action` 与 `page`）控制，这只影响微信自己的搜索。
 - ❓ 没有证据表明豆包、DeepSeek、千问等能读取小程序内的内容。
 - 所以小程序一定要有**能公开访问的网页**（官网或介绍页）和**公众号文章**，把关键事实写在那里，再对这些网页做体检。
 

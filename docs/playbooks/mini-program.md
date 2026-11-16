@@ -29,7 +29,7 @@
 
 **本轮能核实的官方材料：** 微信官方 [miniprogram-demo 的 sitemap 示例](https://github.com/wechat-miniprogram/miniprogram-demo/blob/master/sitemap.json)包含 `rules`、`action` 和 `page` 配置；官方 [API 类型定义](https://github.com/wechat-miniprogram/api-typings/blob/master/types/wx/lib.wx.app.d.ts)列出了打开路径、query、场景值，以及 URL Link 入口。这些材料不证明公众 AI 可以读取全部小程序内容，也不证明元宝直接收录了你的小程序。
 
-**实施前需在自己的后台复核：** [sitemap 文档](https://developers.weixin.qq.com/miniprogram/dev/framework/sitemap.html)、[URL Link 文档](https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/url-link.html)本轮工具未能取得正文；账号资格、跳转条件、配额及最新限制以实际后台和官方页面为准。下文不假定所有账号都能使用同一种外部跳转方式。
+**实施前需在自己的后台复核：** [URL Link 文档](https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/url-link.html)本轮工具未能取得正文；sitemap 的官方说明页（`developers.weixin.qq.com/miniprogram/dev/framework/sitemap.html`）在 2026-11-16 核验时返回 404，配置项以上面 miniprogram-demo 的 `sitemap.json` 和微信开发者工具的实际报错为准。账号资格、跳转条件、配额及最新限制以实际后台和官方页面为准。下文不假定所有账号都能使用同一种外部跳转方式。
 
 ## 第二步：没有官网、已有官网、只有公众号，分别怎么做
 
