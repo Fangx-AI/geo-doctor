@@ -27,7 +27,7 @@ import { parseFactCard, loadFacts, main as siteMain } from './geo-site.mjs';
 import { findGaps, loadSnapshots, configTemplate, main as autopilotMain } from './geo-autopilot.mjs';
 import { applyCandidate, loadCandidates, saveCandidates, readSource, listSourceFiles, main as factsMain } from './geo-facts.mjs';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.8.0';
 const LOOPBACK = new Set(['127.0.0.1', '::1', 'localhost']);
 const MAX_BODY = 5 * 1024 * 1024;
 const TEMPLATES = fileURLToPath(new URL('../skills/geo-doctor/assets/', import.meta.url));

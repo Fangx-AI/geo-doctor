@@ -18,7 +18,7 @@ import { pathToFileURL } from 'node:url';
 import { useEnvProxy } from './proxy.mjs';
 import { articleHtml, checkDrafts, FILL, fillItems, fillJson, fillUserscript, loadDrafts, parseFacts, PLATFORMS, SITE } from './geo-publish.mjs';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.8.0';
 const CONFIRMED = new Set(['已确认', 'confirmed', 'ok']);
 
 // ---------------------------------------------------------------- fact card

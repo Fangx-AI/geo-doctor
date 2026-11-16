@@ -24,7 +24,7 @@ import { PROVIDERS, ask, parseCsv, loadQuestions, summarize, main as probeMain }
 import { checkDrafts, loadDrafts, parseFacts } from './geo-publish.mjs';
 import { parseFactCard, loadFacts } from './geo-site.mjs';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.8.0';
 const VALID = new Set(['完整', '拒答']);
 const pad = (n) => String(n).padStart(2, '0');
 const today = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;

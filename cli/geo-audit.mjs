@@ -17,7 +17,7 @@ import { pathToFileURL } from 'node:url';
 import { useEnvProxy } from './proxy.mjs';
 import { deflateSync, inflateSync } from 'node:zlib';
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.8.0';
 const DOCS = 'https://github.com/Fangx-AI/geo-doctor/blob/master/';
 const BADGE_LINK = { zh: 'https://github.com/Fangx-AI/geo-doctor#badge', en: 'https://github.com/Fangx-AI/geo-doctor/blob/master/README.en.md#badge' };
 const BROWSER_UA = 'Mozilla/5.0 (compatible; geo-doctor-audit/1.0; +https://github.com/Fangx-AI/geo-doctor)';

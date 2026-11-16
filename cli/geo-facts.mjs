@@ -23,7 +23,7 @@ import { PROVIDERS, ask } from './geo-probe.mjs';
 import { parseFactCard } from './geo-site.mjs';
 import { cleanHtml, visibleText } from './geo-audit.mjs';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.8.0';
 const ID_KEYS = new Set(['编号', 'id']);
 const SOURCE_KEYS = new Set(['来源', 'source']);
 const STATUS_KEYS = new Set(['状态', 'status']);
