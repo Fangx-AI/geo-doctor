@@ -63,6 +63,7 @@
 
 | 你用的工具 | 怎么装 |
 | --- | --- |
+| **任意支持 Agent Skills 的客户端**（Cursor、Claude Code、Codex、Kimi Code、TRAE…） | 装过 Node 的话：`npx skills add Fangx-AI/geo-doctor -g`；符号链接装不上的环境（如未开启开发者模式的 Windows）加 `--copy` |
 | **Claude Code** | 输入 `/plugin marketplace add Fangx-AI/geo-doctor`，再输入 `/plugin install geo-doctor@geo-doctor` |
 | **Codex** | 请 `$skill-installer` 安装本仓库的 `skills/geo-doctor`，或把完整文件夹放到 `~/.agents/skills/geo-doctor/` |
 | **Kimi Code** | 把完整文件夹放到 `~/.kimi-code/skills/geo-doctor/`（设置了 `KIMI_CODE_HOME` 时放到 `$KIMI_CODE_HOME/skills/geo-doctor/`），新开会话后使用 |
