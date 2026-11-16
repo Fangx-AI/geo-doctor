@@ -1,4 +1,5 @@
 # 每月检查一次文档里的外部链接。平台文档经常改地址，失效的链接会自动开一个 Issue。
+# 已有同类 Issue 还没关时，改为在那个 Issue 下追加一次结果，不每月新建重复条目。
 name: link-check
 on:
   schedule:
@@ -12,15 +13,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 下面三类链接不参与"是否失效"的判断，正文里照常保留：
+      # - robots.txt：4xx / 405 / 307 本身就是数据，docs/ai-crawler-leaderboard.md
+      #   脚注 ¹ 把"没有 robots.txt"按 RFC 9309 视为不限制。而且同一地址对不同客户端
+      #   返回不同状态（2026-11-16 核验：byd.com 对 lychee 报 404，普通 GET 返回
+      #   200 + text/plain），它不能当链接有效性信号用。
+      # - player.vimeo.com：401 是 embed 域名限制，视频只在原文页面里播放。
+      # - webflow.com 这两篇：页面本身返回 200（2026-11-16 核验），lychee 报的
+      #   HTTP/2 protocol error 是它的 HTTP 客户端与该站 HTTP/2 实现的兼容问题。
       - id: lychee
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --no-progress --max-retries 2 --timeout 30 --accept 200,206,403,429 './**/*.md'
+          args: >-
+            --no-progress --max-retries 2 --timeout 30 --accept 200,206,403,429
+            --exclude 'robots\.txt$'
+            --exclude '^https://player\.vimeo\.com/'
+            --exclude '^https://webflow\.com/blog/landing-pages-vs-websites$'
+            --exclude '^https://webflow\.com/blog/ai-design-tools$'
+            './**/*.md'
           output: ./lychee/out.md
           fail: false
-      - if: steps.lychee.outputs.exit_code != 0
+      - name: Find an open link-check issue
+        id: existing
+        if: steps.lychee.outputs.exit_code != 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          number=$(gh issue list --label links --state open --limit 1 --json number --jq '.[0].number // ""')
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+      - name: Open a new issue
+        if: steps.lychee.outputs.exit_code != 0 && steps.existing.outputs.number == ''
         uses: peter-evans/create-issue-from-file@v5
         with:
           title: 外部链接检查：发现失效链接
           content-filepath: ./lychee/out.md
           labels: links
+      - name: Append the result to the open issue
+        if: steps.lychee.outputs.exit_code != 0 && steps.existing.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ steps.existing.outputs.number }}
+        run: gh issue comment "$ISSUE_NUMBER" --body-file ./lychee/out.md
