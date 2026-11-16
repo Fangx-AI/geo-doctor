@@ -20,6 +20,20 @@ function frontmatter(md) {
   return out;
 }
 
+// The parser above is deliberately simple, and a strict YAML parser — the one the
+// skills CLI and plugin marketplaces use — is not: it rejects a plain (unquoted)
+// scalar containing ": ", reading it as a nested mapping, and then skips the whole
+// skill without installing anything. That is how a description with
+// "(generative engine optimization): use when" made the skill uninstallable while
+// every test here passed. These are the plain-scalar rules that matter for us.
+function scalarSurvivesYaml(value) {
+  if (/^'[\s\S]*'$/.test(value)) return !value.slice(1, -1).includes("'");
+  if (/^"[\s\S]*"$/.test(value)) return true;
+  if (value.includes(': ')) return false;
+  if (/ #/.test(value)) return false;
+  return !/^[[\]{}*&!|>%@`]/.test(value);
+}
+
 for (const name of skills) {
   const dir = join(ROOT, name);
   const md = readFileSync(join(dir, 'SKILL.md'), 'utf8');
@@ -32,6 +46,13 @@ for (const name of skills) {
     assert.ok(fm.description && fm.description.length <= 1024, 'description 1–1024 chars');
     for (const key of Object.keys(fm)) assert.ok(['name', 'description', 'license', 'metadata'].includes(key), `unsupported key ${key}`);
     assert.ok(md.split('\n').length <= 500, 'SKILL.md should stay under 500 lines');
+  });
+
+  test(`${name}: frontmatter survives a strict YAML parser`, () => {
+    const fm = frontmatter(md);
+    for (const [key, value] of Object.entries(fm)) {
+      assert.ok(scalarSurvivesYaml(value), `${key} is not a valid YAML scalar (quote it, or drop ": " from it)`);
+    }
   });
 
   test(`${name}: relative links resolve inside the skill`, () => {
