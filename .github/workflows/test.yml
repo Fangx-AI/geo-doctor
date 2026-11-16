@@ -18,3 +18,14 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm test
       - run: bash -n toolkit/geo-audit.sh
+  windows:
+    # The matrix above only ever ran on Ubuntu, where a Windows path bug is invisible:
+    # execFile was given URL.pathname, which keeps the drive's leading slash ("/C:/…"),
+    # so three tests could never pass on a Windows checkout. Run the suite there too.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test

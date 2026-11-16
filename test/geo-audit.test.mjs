@@ -7,6 +7,13 @@ import { deflateSync, inflateSync } from 'node:zlib';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// execFile wants a filesystem path, and URL.pathname is not one: it keeps the leading
+// slash of a Windows drive ("/C:/…") and never decodes percent-escapes, so it only
+// happens to work on a POSIX host with a plain ASCII checkout. fileURLToPath is the
+// inverse of `new URL(...)`, on every platform.
+const CLI = fileURLToPath(new URL('../cli/geo-audit.mjs', import.meta.url));
 
 const BODY = '<p>' + '团队版每月 299 元，含 20 个席位，超出部分每席 20 元。'.repeat(12) + '</p>';
 const page = (head, body = BODY, lang = ' lang="zh-CN"') =>
@@ -243,7 +250,7 @@ test('CLI exits 2 with a useful error for an invalid CI threshold', async () => 
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
   await assert.rejects(
-    promisify(execFile)(process.execPath, [new URL('../cli/geo-audit.mjs', import.meta.url).pathname,
+    promisify(execFile)(process.execPath, [CLI,
       base + '/good', '--no-probe', '--fail-under', 'eighty'], { timeout: 5000 }),
     (error) => {
       assert.equal(error.code, 2);
@@ -263,7 +270,7 @@ test('--report creates missing folders', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'geo-'));
   try {
     // Async so this process can keep serving the fixture page while the CLI fetches it.
-    await promisify(execFile)(process.execPath, [new URL('../cli/geo-audit.mjs', import.meta.url).pathname, base + '/good', '--no-probe', '--lang', 'zh', '--report', 'geo/audit.md'], { cwd: dir });
+    await promisify(execFile)(process.execPath, [CLI, base + '/good', '--no-probe', '--lang', 'zh', '--report', 'geo/audit.md'], { cwd: dir });
     assert.match(readFileSync(join(dir, 'geo/audit.md'), 'utf8'), /最终状态码 200/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
@@ -337,7 +344,7 @@ test('--badge writes an SVG with the lowest score', async () => {
   const { promisify } = await import('node:util');
   const dir = mkdtempSync(join(tmpdir(), 'geo-'));
   try {
-    const { stderr } = await promisify(execFile)(process.execPath, [new URL('../cli/geo-audit.mjs', import.meta.url).pathname,
+    const { stderr } = await promisify(execFile)(process.execPath, [CLI,
       base + '/good', base + '/empty', '--no-probe', '--lang', 'en', '--badge', 'badges/geo.svg'], { cwd: dir });
     const svg = readFileSync(join(dir, 'badges/geo.svg'), 'utf8');
     const shell = await audit(base + '/empty', { lang: 'en', probe: false });
