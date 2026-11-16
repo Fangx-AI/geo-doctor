@@ -34,6 +34,20 @@ https://github.com/Fangx-AI/geo-doctor/tree/master/skills/geo-doctor
 
 链接打不开时可提供完整文件夹或包，不必为读取这个公开仓库反复登录 GitHub。报错时保留原文，不将“已理解技能内容”记为“已安装”。
 
+## 一条命令安装（skills CLI）
+
+装了 Node 的机器可以用 skills CLI 直接装，不用手动找技能目录：
+
+```text
+npx skills add Fangx-AI/geo-doctor -g
+```
+
+- 不加 `-g` 装到当前项目，加了装到用户目录；`-a <agent>` 指定客户端，`-s geo-doctor` 只装这一个技能。
+- 默认用符号链接指向安装源。Windows 未开启开发者模式、或环境不允许创建符号链接时加 `--copy` 改成复制；不放心链接也建议加。
+- 只检查这个仓库有哪几个技能，不安装：`npx skills add Fangx-AI/geo-doctor --list`。
+
+**核验到哪一步**：2026-11-16 用 `skills@1.9.0` 对本地检出执行 `--list`，识别到 1 个技能 `geo-doctor`。这一步证明 `SKILL.md` 的 frontmatter 能被严格 YAML 解析器读到（此前 description 未加引号，其中 `(generative engine optimization): use when` 含冒号加空格，客户端会把整行当成嵌套映射并**静默跳过整个技能**）。具体客户端装完是否触发、能否读 references，仍按下表实测，不因为 `--list` 通过就记为安装成功。
+
 ## 各平台步骤
 
 ### Claude Code

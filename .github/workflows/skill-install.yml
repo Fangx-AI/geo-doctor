@@ -1,0 +1,42 @@
+name: skill install
+# test/skill.test.mjs checks the structure of skills/ with its own line-based parser.
+# The client that actually installs the skill uses a strict YAML parser, which rejects
+# things the simple one accepts — an unquoted description containing ": " silently
+# turned the whole skill into "No valid skills found". This job runs the real installer
+# in list mode, so that class of breakage fails CI instead of the user's install.
+on:
+  push:
+    paths:
+      - 'skills/**'
+      - 'package.json'
+      - '.github/workflows/skill-install.yml'
+  pull_request:
+    paths:
+      - 'skills/**'
+      - 'package.json'
+      - '.github/workflows/skill-install.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  listable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # A nonzero exit from the installer, or a skill on disk that it does not offer,
+      # both fail this step.
+      - name: The skills CLI can read every SKILL.md
+        run: |
+          set -euo pipefail
+          out=$(npx --yes skills@1 add . --list 2>&1)
+          printf '%s\n' "$out"
+          for dir in skills/*/; do
+            name=$(basename "$dir")
+            case "$out" in
+              *"$name"*) ;;
+              *) echo "::error::$name is on disk but the installer does not offer it"; exit 1 ;;
+            esac
+          done
