@@ -46,13 +46,26 @@
 
 ## 📦 安装：复制一句话发给你的 AI
 
-在 Claude Code、Codex、Kimi Code、WorkBuddy 等能安装技能的 AI 助手里，新开一个对话，发送：
+六个技能，每个只做一件事。**整套装**适合从零开始，**只装一个**适合你已经知道卡在哪一步。
+
+| 技能 | 它回答的问题 | 什么时候装 |
+| --- | --- | --- |
+| `ai-crawler-audit` | AI 爬虫能不能读到我的页面 | 不知道为什么 AI 看不见你 |
+| `ai-visibility` | AI 到底提不提我、推荐的是谁 | 想知道该不该做、做了有没有用 |
+| `ai-content-writer` | 该写什么、AI 说错了我的信息怎么办 | AI 说错你，或不知道写什么 |
+| `llms-txt` | llms.txt 和给 AI 读的事实站怎么做 | 想要机器可读的站点与事实源 |
+| `geo-publish` | 发到哪、怎么发、发完怎么记账 | 稿子写好了要分发 |
+| `geo-doctor` | 全流程总纲、每周自动复查 | 不确定从哪一步开始 |
+
+**整套安装**（第一次用推荐这个）。在 Claude Code、Codex、Kimi Code、WorkBuddy 等能安装技能的 AI 助手里，新开一个对话，发送：
 
 ```text
-帮我安装这个 skill：https://github.com/Fangx-AI/geo-doctor/tree/master/skills/geo-doctor
+帮我安装这个 skill：https://github.com/Fangx-AI/geo-doctor/tree/master/skills
 ```
 
-装好后说一句 **"帮我做 GEO"**，它会先问你几个问题，再开始体检。
+装好后说一句 **"帮我做 GEO"**，它会先问你几个问题，再分诊到该做的那一步。
+
+**只装一个**：把链接换成具体目录（例如 `.../tree/master/skills/ai-crawler-audit`），或命令行 `npx skills add Fangx-AI/geo-doctor -s ai-crawler-audit -g`。
 
 > 豆包、DeepSeek 这类普通聊天 App 目前装不了技能（2026-10-14 在豆包 App 实测），但它们正是 GEO 医生要优化的对象：在能装技能的助手里诊断，采样时再去豆包里问。
 >
@@ -63,11 +76,11 @@
 
 | 你用的工具 | 怎么装 |
 | --- | --- |
-| **任意支持 Agent Skills 的客户端**（Cursor、Claude Code、Codex、Kimi Code、TRAE…） | 装过 Node 的话：`npx skills add Fangx-AI/geo-doctor -g`；符号链接装不上的环境（如未开启开发者模式的 Windows）加 `--copy` |
-| **Claude Code** | 输入 `/plugin marketplace add Fangx-AI/geo-doctor`，再输入 `/plugin install geo-doctor@geo-doctor` |
-| **Codex** | 请 `$skill-installer` 安装本仓库的 `skills/geo-doctor`，或把完整文件夹放到 `~/.agents/skills/geo-doctor/` |
-| **Kimi Code** | 把完整文件夹放到 `~/.kimi-code/skills/geo-doctor/`（设置了 `KIMI_CODE_HOME` 时放到 `$KIMI_CODE_HOME/skills/geo-doctor/`），新开会话后使用 |
-| **支持上传技能包的客户端** | 在 [Releases](https://github.com/Fangx-AI/geo-doctor/releases) 下载 `geo-doctor.zip`，在技能页面上传 |
+| **任意支持 Agent Skills 的客户端**（Cursor、Claude Code、Codex、Kimi Code、TRAE…） | 装过 Node 的话：`npx skills add Fangx-AI/geo-doctor -g`（六个一起），单个用 `-s ai-crawler-audit` 这类名字；符号链接装不上的环境（如未开启开发者模式的 Windows）加 `--copy` |
+| **Claude Code** | 输入 `/plugin marketplace add Fangx-AI/geo-doctor`，再输入 `/plugin install geo-doctor@geo-doctor`，插件里含全部六个技能 |
+| **Codex** | 请 `$skill-installer` 安装本仓库的 `skills/<名字>`，或把完整文件夹放到 `~/.agents/skills/<名字>/` |
+| **Kimi Code** | 把完整文件夹放到 `~/.kimi-code/skills/<名字>/`（设置了 `KIMI_CODE_HOME` 时放到 `$KIMI_CODE_HOME/skills/<名字>/`），新开会话后使用 |
+| **支持上传技能包的客户端** | 在 [Releases](https://github.com/Fangx-AI/geo-doctor/releases) 下载对应技能的 zip（例如 `ai-crawler-audit.zip`，或一次拿全的 `geo-doctor-all.zip`），在技能页面上传 |
 
 </details>
 
@@ -93,13 +106,13 @@
 
 **不想用命令行？打开工作台。** 在项目目录运行 `npx -p github:Fangx-AI/geo-doctor geo-studio`，浏览器打开 `http://127.0.0.1:4173`：看各 AI 的推荐趋势和缺口题，点一下确认事实，逐篇审核 AI 写的稿（引用了未确认事实的稿不能通过），一键采样、写稿、出报告、生成事实站。「分发中心」用一张「文章 × 渠道」表管所有渠道：官网和 dev.to 自动发，知乎、掘金由填稿助手在你自己的浏览器里填好、你点发布、链接自动记回，公众号等一键复制排版。把官网和产品资料放进「资料」页，AI 会帮你摘事实填事实卡，每条都附原文，原文里找不到的直接丢掉。不用装数据库，数据就是 `geo/` 文件夹；默认只在你自己电脑上打开。
 
-> 第 4 步可以用命令行自动问：`DEEPSEEK_API_KEY=… npx -p github:Fangx-AI/geo-doctor geo-probe run geo/questions.csv --ai deepseek,qwen --brand "你的品牌" --competitors "竞品甲,竞品乙"`，每题问 2 次，存下全部原文，算出推荐率和竞品推荐榜。用法见 [第 4 步说明](skills/geo-doctor/references/04-sampling.md#自动采样用-api-批量问可选)。
+> 第 4 步可以用命令行自动问：`DEEPSEEK_API_KEY=… npx -p github:Fangx-AI/geo-doctor geo-probe run geo/questions.csv --ai deepseek,qwen --brand "你的品牌" --competitors "竞品甲,竞品乙"`，每题问 2 次，存下全部原文，算出推荐率和竞品推荐榜。用法见 [第 4 步说明](skills/ai-visibility/references/sampling.md)。
 >
-> 第 6、7 步也可以单独用命令行跑：`npx -p github:Fangx-AI/geo-doctor geo-publish check geo/drafts` 检查一批草稿，`… site … --to wordpress` 发到官网，`… pack …` 打包第三方平台稿件，`… post … --to devto` 用官方接口自动发到 dev.to；生成事实站时还会附带一个分发台页面和浏览器填稿助手：在一个页面里看每篇文章在各平台的状态，点一下就打开知乎、掘金编辑器并填好，你检查后点发布，链接自动记回分发台。完整用法见 [第 7 步说明](skills/geo-doctor/references/07-publishing.md#第三步批量发布自己的官网自动发第三方平台由人发)。
+> 第 6、7 步也可以单独用命令行跑：`npx -p github:Fangx-AI/geo-doctor geo-publish check geo/drafts` 检查一批草稿，`… site … --to wordpress` 发到官网，`… pack …` 打包第三方平台稿件，`… post … --to devto` 用官方接口自动发到 dev.to；生成事实站时还会附带一个分发台页面和浏览器填稿助手：在一个页面里看每篇文章在各平台的状态，点一下就打开知乎、掘金编辑器并填好，你检查后点发布，链接自动记回分发台。完整用法见 [第 7 步说明](skills/geo-publish/references/publishing.md)。
 >
 > 没有能被 AI 读懂的官网？`npx -p github:Fangx-AI/geo-doctor geo-site build --facts geo/fact-card.yaml --out site --base-url https://你的网址/` 用事实卡里已确认的事实生成事实页、常见问题页、`llms.txt` 和结构化数据，体检 100 分；`geo-site action` 再写一个工作流，自动发布到 GitHub Pages。
 >
-> 想让它每周自己治？`npx -p github:Fangx-AI/geo-doctor geo-autopilot action` 写一个每周一运行的工作流：重新采样、找出竞品被推荐而你没有的题、只用已确认的事实给每道缺口写一篇稿、写疗效报告，最后开一个 PR 给你审。合并即发布，你只需要看稿、点合并。用法见 [第 8 步说明](skills/geo-doctor/references/08-retest.md#每周自动复查自动驾驶可选)。
+> 想让它每周自己治？`npx -p github:Fangx-AI/geo-doctor geo-autopilot action` 写一个每周一运行的工作流：重新采样、找出竞品被推荐而你没有的题、只用已确认的事实给每道缺口写一篇稿、写疗效报告，最后开一个 PR 给你审。合并即发布，你只需要看稿、点合并。用法见 [第 8 步说明](skills/ai-visibility/references/retest.md)。
 
 > 为什么还要你自己去 App 里问？因为你在 App 里看到的回答，才是你的用户看到的；API 回答不登录、多数不联网，和 App 里可能不一样。自动采样适合高频看趋势，重要结论用 App 里的人工采样确认。AI 每次回答都不一样，所以每题问 2 次，看出现率而不是单次排名。只想提高豆包，就只问豆包，一轮 15 到 20 分钟。
 

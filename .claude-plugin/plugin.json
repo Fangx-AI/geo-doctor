@@ -1,9 +1,12 @@
 {
   "name": "geo-doctor",
-  "description": "GEO 医生：中英双语 GEO（生成式引擎优化）全流程 skill",
+  "description": "GEO 医生：六个单点技能组成的 GEO（生成式引擎优化）工具集：AI 爬虫体检、AI 可见度实测、事实卡与内容写作、llms.txt 事实站、多平台发布、全流程总纲",
   "version": "1.8.0",
-  "author": { "name": "Fangx-AI" },
+  "author": {
+    "name": "Fangx-AI"
+  },
   "homepage": "https://github.com/Fangx-AI/geo-doctor",
   "repository": "https://github.com/Fangx-AI/geo-doctor",
-  "license": "MIT"
+  "license": "MIT",
+  "skills": "./skills"
 }

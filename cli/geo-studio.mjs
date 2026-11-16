@@ -30,7 +30,11 @@ import { applyCandidate, loadCandidates, saveCandidates, readSource, listSourceF
 export const VERSION = '1.8.0';
 const LOOPBACK = new Set(['127.0.0.1', '::1', 'localhost']);
 const MAX_BODY = 5 * 1024 * 1024;
-const TEMPLATES = fileURLToPath(new URL('../skills/geo-doctor/assets/', import.meta.url));
+// Templates ship with the skill that owns them, so a skill zip stays self-contained.
+// 模板跟着各自的技能走，技能包才自包含。
+const TEMPLATE_DIRS = ['../skills/ai-content-writer/assets/', '../skills/ai-visibility/assets/']
+  .map((rel) => fileURLToPath(new URL(rel, import.meta.url)));
+const templatePath = (name) => TEMPLATE_DIRS.map((dir) => join(dir, name)).find((file) => existsSync(file));
 
 const M = {
   zh: {
@@ -221,7 +225,7 @@ export function readState(dir, { env = process.env, lang = 'zh' } = {}) {
     version: VERSION, dir: resolve(dir), lang, files, errors, config, keys,
     questions: questions.map((q) => ({ id: q.id, cls: q.cls, question: q.question, priority: priority.get(q.id) || '' })),
     facts, drafts, trend, gaps, batches, reports, sources, candidates, published, channels,
-    templates: existsSync(join(TEMPLATES, 'fact-card.yaml')),
+    templates: Boolean(templatePath('fact-card.yaml')),
   };
 }
 
@@ -459,7 +463,8 @@ export function createStudio({ dir = '.', lang = 'zh', env = process.env, token 
       // Starts a project from the bundled templates; never overwrites. 用模板开一个新项目，已有文件不覆盖。
       mkdirSync(p.geo, { recursive: true }); const wrote = [];
       for (const [k, tpl] of [['facts', 'fact-card.yaml'], ['questions', 'questions.csv']]) {
-        if (!existsSync(p[k]) && existsSync(join(TEMPLATES, tpl))) { copyFileSync(join(TEMPLATES, tpl), p[k]); wrote.push(basename(p[k])); }
+        const from = templatePath(tpl);
+        if (!existsSync(p[k]) && from) { copyFileSync(from, p[k]); wrote.push(basename(p[k])); }
       }
       // Drafts written from the studio wait for approval on the Drafts page, so new projects never auto-confirm.
       // 工作台里由人逐篇通过，所以新项目默认不自动确认。

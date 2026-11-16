@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { cardShape, quoteFound, valueSupported, checkCandidate, applyCandidate, parseCandidates, splitChunks, setEntryField, readSource, extractPrompt, main } from '../cli/geo-facts.mjs';
 import { parseFactCard, loadFacts } from '../cli/geo-site.mjs';
 
-const TEMPLATE = readFileSync(new URL('../skills/geo-doctor/assets/fact-card.yaml', import.meta.url), 'utf8');
+const TEMPLATE = readFileSync(new URL('../skills/ai-content-writer/assets/fact-card.yaml', import.meta.url), 'utf8');
 const MATERIAL = `小鹿记账是一款不联网也能用的个人记账 App，数据只存在你的手机里。
 
 高级版每年 18 元，包含多账本和导出 Excel。支持 iOS 和 Android。

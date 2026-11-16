@@ -32,18 +32,28 @@ jobs:
           else echo "Tag $TAG does not exist yet; packaging $GITHUB_REF and creating the release there."; fi
         env:
           TAG: ${{ inputs.tag }}
-      - run: mkdir -p dist && cd skills && zip -qr ../dist/geo-doctor.zip geo-doctor
+      # One zip per skill, because upload-based clients (豆包 / WorkBuddy / 扣子 / TRAE)
+      # install exactly one skill at a time, plus a bundle for anyone who wants all six.
+      - run: |
+          mkdir -p dist
+          cd skills
+          for dir in */; do
+            name="${dir%/}"
+            zip -qr "../dist/$name.zip" "$name"
+          done
+          zip -qr ../dist/geo-doctor-all.zip .
+          ls -l ../dist
       - uses: actions/upload-artifact@v4
         with:
-          name: geo-doctor
-          path: dist/geo-doctor.zip
+          name: skills
+          path: dist/*.zip
       - if: inputs.tag || github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
         # Upload to the release if it already exists (web UI, or the other trigger won the race); otherwise create it.
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/geo-doctor.zip --clobber
+            gh release upload "$TAG" dist/*.zip --clobber
           else
-            gh release create "$TAG" dist/geo-doctor.zip --target "$(git rev-parse HEAD)" --title "GEO 医生 $TAG" --generate-notes || gh release upload "$TAG" dist/geo-doctor.zip --clobber
+            gh release create "$TAG" dist/*.zip --target "$(git rev-parse HEAD)" --title "GEO 医生 $TAG" --generate-notes || gh release upload "$TAG" dist/*.zip --clobber
           fi
         env:
           GH_TOKEN: ${{ github.token }}
