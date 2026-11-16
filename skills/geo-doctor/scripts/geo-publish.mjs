@@ -16,7 +16,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { useEnvProxy } from './proxy.mjs';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.8.0';
 const UA = 'geo-doctor-publish/1.0 (+https://github.com/Fangx-AI/geo-doctor)';
 
 export const SITE = 'site';

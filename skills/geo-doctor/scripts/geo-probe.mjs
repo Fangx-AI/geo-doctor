@@ -18,7 +18,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { useEnvProxy } from './proxy.mjs';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.8.0';
 
 // OpenAI-compatible chat endpoints unless kind is set. Models change often: override with --ai name:model.
 // 默认都是 OpenAI 兼容接口。模型更新很快，可以用 --ai 名称:模型 指定。
