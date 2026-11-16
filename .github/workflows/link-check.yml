@@ -25,7 +25,7 @@ jobs:
         uses: lycheeverse/lychee-action@v2
         with:
           args: >-
-            --no-progress --max-retries 2 --timeout 30 --accept 200,206,403,429
+            --no-progress --max-retries 2 --timeout 60 --accept 200,206,403,429
             --exclude 'robots\.txt$'
             --exclude '^https://player\.vimeo\.com/'
             --exclude '^https://webflow\.com/blog/landing-pages-vs-websites$'
