@@ -385,8 +385,12 @@ test('share card: PNG crop keeps the top rows and stays a valid PNG', () => {
 });
 
 test('share card: browser lookup uses CHROME_PATH, then the usual install paths', () => {
+  // The simulated platform decides the separators: join() follows the host, so a
+  // Windows checkout must not compare against POSIX paths.
+  // findBrowser joins with the host's path.join, so the expectation must too:
+  // a Windows checkout yields backslashes even when 'linux' is simulated.
   assert.equal(findBrowser({ CHROME_PATH: '/x/chrome' }, 'linux', (p) => p === '/x/chrome'), '/x/chrome');
-  assert.equal(findBrowser({ PATH: '/usr/bin:/opt/bin' }, 'linux', (p) => p === '/opt/bin/chromium'), '/opt/bin/chromium');
+  assert.equal(findBrowser({ PATH: '/usr/bin:/opt/bin' }, 'linux', (p) => p === join('/opt/bin', 'chromium')), join('/opt/bin', 'chromium'));
   assert.equal(findBrowser({}, 'darwin', (p) => p.includes('Microsoft Edge')), '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge');
   assert.match(findBrowser({ PROGRAMFILES: 'C:/PF' }, 'win32', (p) => p.endsWith('chrome.exe')), /Google.Chrome.Application.chrome\.exe$/);
   assert.equal(findBrowser({ PATH: '/usr/bin' }, 'linux', () => false), null);
