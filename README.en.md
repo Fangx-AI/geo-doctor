@@ -67,7 +67,7 @@ Like a doctor's visit, in eight steps, each with a file you keep:
 | 0 Intake | "help me with GEO" | Asks about your product, your market and which AI matters most, then researches your industry | Case notes |
 | 1 Audit | "can AI read my site?" | Checks robots.txt, AI crawlers, firewalls, noindex, and whether your copy is in the raw HTML | Issue list with fixes |
 | 2 Fact card | "organize my product facts" | Collects facts from your site, pricing and docs, and flags channels that disagree | One source of truth |
-| 3 Questions | "how do people ask AI?" | Writes 20–30 questions in your users' own words and picks 10 core ones | Question set |
+| 3 Questions | "how do people ask AI?" | Writes questions in your users' own words, audits the set (type mix, provenance, duplicates, leading wording), then freezes 12–18 gauge questions | Question baseline |
 | 4 Sampling | "what does AI say about me now?" | Tells you which 10 questions to ask in your target AI; you paste the answers back. With API keys it can also ask ChatGPT, Claude, Perplexity, Gemini, DeepSeek and others automatically, archiving every answer | Answer archive and recommendation rate |
 | 5 Diagnosis | "why doesn't it recommend me?" | Computes your recommendation rate, ranks competitors, and lists each question where a competitor is recommended and you aren't, with the sites AI read | Competitor gap list and prescription |
 | 6 Batch writing | "write them all" | One article per gap question, only from the fact card; a script checks placeholders, hype, unconfirmed facts and near-duplicates | A batch of pages, FAQs, comparisons |

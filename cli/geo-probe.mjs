@@ -46,6 +46,10 @@ const M = {
 用法：
   geo-probe run <questions.csv> --ai deepseek,qwen --brand "品牌,别名" [--competitors "竞品甲,竞品乙"]
   geo-probe report [runs.csv] [--batch 批次] [--questions questions.csv] [--out 文件]
+  geo-probe check <questions.csv> [--brand "品牌,别名"]
+
+check 检查问题基线本身：题量、类型配比、核心题、重复、诱导、A 类题里的品牌名、缺限定条件、证据来源。
+有 fail 时退出码 1；warn 不影响退出码，但要写清为什么保留。
 
 run 选项：
   --ai 列表            要问的 AI，逗号分隔，可写 名称:模型。可选：${Object.keys(PROVIDERS).join('、')}
@@ -88,6 +92,10 @@ API 回答不等于用户在 App 里看到的回答：记录都标"入口=API"�
 Usage:
   geo-probe run <questions.csv> --ai deepseek,openai --brand "Brand,alias" [--competitors "Rival A,Rival B"]
   geo-probe report [runs.csv] [--batch name] [--questions questions.csv] [--out file]
+  geo-probe check <questions.csv> [--brand "Brand,alias"]
+
+check audits the question set itself: size, type mix, gauge questions, duplicates, leading wording, brand names in discovery questions,
+missing constraints, and where each question came from. Exit 1 when something must be fixed; warnings keep exit 0 but need a reason.
 
 run options:
   --ai list             AIs to ask, comma-separated, optionally name:model. Known: ${Object.keys(PROVIDERS).join(', ')}
@@ -164,6 +172,198 @@ export function loadQuestions(text) {
     asked.push({ id, type, cls: (type.match(/^[A-Za-z]/) || [''])[0].toUpperCase(), question });
   }
   return { asked, skipped };
+}
+
+// ---------------------------------------------------------------- question baseline
+
+// Shapes are how the question is asked, independent of industry. Two questions can share a type
+// (both A) and still test different things, because a comparison question and a discovery question
+// make the engine behave differently.
+export const QUESTION_SHAPES = ['认知定义', '品类发现', '选型推荐', '直接对比', '找替代', '预算约束', '实施集成', '排错', '合规风险', '本地时效'];
+const LEADING = /请(帮我)?推荐|推荐一下|最好的|最强的|最值得|哪家最好|排名第一|一定要选/i;
+const QUALIFIER = /[\d一二三四五六七八九十]+\s*(人|元|块|万|千|个|天|小时|月|年|万)|预算|以内|以下|左右|不超过|便宜|低价|性价比|省钱|不花钱|小团队|初创|中小企业|大企业|个人|家用|免费|开源|离线|不用联网|断网|私有化|合规|等保|跨境|出海|微信|小程序|iOS|Android|Windows|macOS|远程|上门|线下|附近|本地|北京|上海|广州|深圳|杭州|成都|武汉|南京|西安|重庆|苏州|天津/i;
+const CORE = /核心|仪表|gauge/i;
+const TARGET = { A: 0.4, B: 0.3, C: 0.2, D: 0.1 };
+
+const normQ = (s) => String(s || '').normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
+const bigrams = (s) => {
+  const t = normQ(s); const set = new Set();
+  for (let i = 0; i < t.length - 1; i++) set.add(t.slice(i, i + 2));
+  return set;
+};
+const overlap = (a, b) => {
+  if (!a.size || !b.size) return 0;
+  let n = 0; for (const x of a) if (b.has(x)) n++;
+  return n / (a.size + b.size - n);
+};
+const pct = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : 0);
+
+// Audit a question set before it is sampled. Everything here is mechanical on purpose: a question
+// you cannot check is a question you cannot defend in a report.
+export function checkQuestions(text, { brands = [], lang = 'zh' } = {}) {
+  const zh = lang !== 'en';
+  const names = brands.filter(Boolean);
+  const rows = []; const templates = [];
+  parseCsv(text).forEach((r, i) => {
+    const q = {
+      line: i + 2,
+      id: (r.id || r.ID || '').trim() || `#${i + 1}`,
+      type: ((r['类型'] || r.type || '').trim().match(/^[A-Za-z]/) || [''])[0].toUpperCase(),
+      shape: (r['形状'] || r.shape || '').trim(),
+      question: (r['问题'] || r.question || '').trim(),
+      criteria: (r['判定标准'] || r.criteria || '').trim(),
+      facts: (r['对应事实'] || r.facts || '').trim(),
+      priority: (r['优先级'] || r.priority || '').trim(),
+      sourceKind: (r['来源类型'] || r.sourceKind || r.source_kind || '').trim(),
+      source: (r['来源'] || r.source || '').trim(),
+      evidence: (r['证据等级'] || r.evidence || '').trim(),
+    };
+    if (!q.question) return;
+    if (/^[（(].*[）)]$/.test(q.question) || /待填写|TODO/.test(q.question)) { templates.push(q.id); return; }
+    rows.push(q);
+  });
+
+  const fails = []; const warns = []; let passed = 0;
+  const F = (id, msg) => fails.push({ id, msg });
+  const W = (id, msg) => warns.push({ id, msg });
+  const total = rows.length;
+  const byType = { A: 0, B: 0, C: 0, D: 0 };
+  for (const q of rows) if (q.type in byType) byType[q.type]++;
+  const core = rows.filter((q) => CORE.test(q.priority));
+
+  if (!total) {
+    F('', zh ? '没有问题：模板占位题会被跳过，至少写 12 道真问题' : 'No questions. Template placeholders are skipped; write at least 12 real ones');
+    return { rows, templates, byType, core: 0, fails, warns, passed };
+  }
+  if (total < 12) F('', zh ? `只有 ${total} 道题。少于 12 道时，一次回答的波动就能改变结论` : `Only ${total} questions. Below 12, one answer can flip the conclusion`);
+  else if (total > 40) W('', zh ? `${total} 道题偏多：先确认你能真的问完（题量 × 平台 × 次数）` : `${total} questions is a lot. Check you can actually run them (questions × platforms × repeats)`);
+  else passed++;
+
+  for (const q of rows) {
+    if (!(q.type in byType)) F(q.id, zh ? `类型「${q.type || '空'}」不认识，只能是 A/B/C/D` : `Unknown type "${q.type || 'empty'}"; use A/B/C/D`);
+    else passed++;
+  }
+
+  // Quota: a set that only contains questions you can win measures your optimism, not your visibility.
+  for (const [k, target] of Object.entries(TARGET)) {
+    const share = total ? byType[k] / total : 0;
+    const diff = Math.round((share - target) * 100) / 100;
+    if (Math.abs(diff) <= 0.1) { passed++; continue; }
+    const line = zh
+      ? `${k} 类占 ${pct(byType[k], total)}%，目标约 ${Math.round(target * 100)}%（±10 个百分点）`
+      : `${k} is ${pct(byType[k], total)}% of the set; target about ${Math.round(target * 100)}% (±10 points)`;
+    if (k === 'C' && share < 0.15) F('', line);
+    else W('', line);
+  }
+  if (!byType.C) F('', zh ? '一道 C 类题都没有：全是“你能赢”的题集，测出来的数字没有意义' : 'No C questions: a set of only winnable questions produces a meaningless number');
+
+  // Gauge questions: the only ones a trend may be reported on.
+  if (!core.length) W('', zh ? '没有标出核心题（优先级=核心）：复查时只能换题，前后就没法比' : 'No gauge questions marked (priority=核心); retests would not be comparable');
+  else if (core.length < 12) W('', zh ? `核心题 ${core.length} 道，建议 12–18 道：太少时单题波动会盖过真实变化` : `${core.length} gauge questions; 12–18 is steadier, one question can swing a small set`);
+  else if (core.length > 20) W('', zh ? `核心题 ${core.length} 道偏多，复查成本高，建议压到 18 道左右` : `${core.length} gauge questions is expensive to rerun; about 18 is a good ceiling`);
+  else passed++;
+
+  // Every question needs a verdict rule, otherwise the answer cannot be scored the same way twice.
+  for (const q of rows) {
+    if (q.criteria) { passed++; continue; }
+    W(q.id, zh ? '没有判定标准：什么算提到、什么算推荐，两次采样会判得不一样' : 'No verdict rule: what counts as mentioned or recommended will be judged differently next time');
+  }
+
+  // Provenance: a question with no source cannot be defended as "users really ask this".
+  for (const q of rows) {
+    if (q.source) { passed++; continue; }
+    W(q.id, zh ? '没有来源：无法证明这是用户真会问的问题' : 'No source: nothing shows a real user would ask this');
+  }
+  const madeUp = rows.filter((q) => q.evidence === '5' || /构造/.test(q.sourceKind));
+  if (madeUp.length && madeUp.length / total > 0.4) {
+    W('', zh ? `${madeUp.length}/${total} 道题是构造的（超过 40%）：报告里必须写明这是假设题集，不能当用户需求分布` : `${madeUp.length}/${total} questions are constructed (>40%); label the set as hypothetical, not a picture of real demand`);
+  }
+  for (const q of rows) {
+    if (!q.evidence) continue;
+    if (!/^[1-5]$/.test(q.evidence)) F(q.id, zh ? `证据等级「${q.evidence}」无效，只能是 1–5` : `Evidence level "${q.evidence}" must be 1–5`);
+    else passed++;
+  }
+  const coreWeak = core.filter((q) => q.evidence === '5' || /构造/.test(q.sourceKind));
+  if (core.length && coreWeak.length / core.length > 0.5) {
+    W('', zh ? `核心题里 ${coreWeak.length}/${core.length} 道是构造的：仪表题最好至少一半来自真实语料或平台追问` : `${coreWeak.length}/${core.length} gauge questions are constructed; at least half should come from real material or engine follow-ups`);
+  }
+
+  // Discovery questions (A) must not name the brand: that turns it into a "does it recognise the word" test.
+  for (const q of rows) {
+    if (q.type !== 'A' || !names.length) continue;
+    const hit = names.find((n) => normQ(q.question).includes(normQ(n)));
+    if (hit) F(q.id, zh ? `A 类题里出现了自己的品牌名「${hit}」：A 类测的是“没听过你时会不会被推荐”，带品牌名就变成认词测试` : `Discovery question names your brand "${hit}"; it then tests word recognition, not recommendation`);
+    else passed++;
+  }
+
+  // Leading wording: "the best X" or "please recommend X" tells the engine the answer.
+  for (const q of rows) {
+    if (LEADING.test(q.question)) W(q.id, zh ? '带有诱导措辞（最好的/请推荐…）：AI 会直接给榜单，测不出自然浮现' : 'Leading wording (the best / please recommend): the engine just returns a list, so organic appearance is untested');
+    else passed++;
+  }
+
+  // Constraints: without a budget, size, region or platform, every set collapses into the same generic list.
+  for (const q of rows) {
+    if (q.type !== 'A') continue;
+    if (QUALIFIER.test(q.question)) { passed++; continue; }
+    W(q.id, zh ? 'A 类题没有限定条件（预算/规模/地区/平台）：无限定的问题通常得到泛榜答案，对你的品牌没有区分度' : 'Discovery question has no constraint (budget, size, region, platform); unconstrained questions return the same generic list for everyone');
+  }
+
+  // Duplicates: the same intent asked twice is one data point, not two.
+  const seen = new Map();
+  for (const q of rows) {
+    const key = normQ(q.question);
+    if (!key) continue;
+    if (seen.has(key)) F(q.id, zh ? `与 ${seen.get(key)} 完全重复（去掉标点和空格后相同）：同一道题问两次不是两个数据点` : `Duplicate of ${seen.get(key)} after stripping punctuation: the same question twice is still one data point`);
+    else seen.set(key, q.id);
+  }
+  const grams = rows.map((q) => ({ q, g: bigrams(q.question) }));
+  for (let i = 0; i < grams.length; i++) {
+    for (let j = i + 1; j < grams.length; j++) {
+      if (normQ(grams[i].q.question) === normQ(grams[j].q.question)) continue;
+      const sim = overlap(grams[i].g, grams[j].g);
+      if (sim >= 0.85) W(grams[j].q.id, zh ? `与 ${grams[i].q.id} 高度相似（${Math.round(sim * 100)}%）：同一意图换措辞算一道题，不算两道` : `Nearly the same as ${grams[i].q.id} (${Math.round(sim * 100)}%); rephrasings of one intent are one question`);
+    }
+  }
+
+  // Shape coverage: how the question is asked decides whether the engine searches at all.
+  const shaped = core.length ? core : rows;
+  const shapes = new Set(shaped.map((q) => q.shape).filter(Boolean));
+  if (!shapes.size) W('', zh ? '没有填「形状」列：无法检查问法覆盖（可以补上，见 references/question-shapes.md）' : 'No shape column: question coverage cannot be checked (see references/question-shapes.md)');
+  else if (shapes.size < 5) W('', zh ? `只用了 ${shapes.size} 种问法：建议至少 5 种，因为不同问法测到的机制不同` : `Only ${shapes.size} shapes; at least 5 is safer because different shapes exercise different machinery`);
+  else passed++;
+
+  return { rows, templates, byType, core: core.length, shapes: [...shapes], fails, warns, passed };
+}
+
+export function renderCheck(result, file, lang = 'zh') {
+  const zh = lang !== 'en';
+  const { rows, byType, core, shapes = [], fails, warns, passed, templates } = result;
+  const total = rows.length;
+  const L = [];
+  L.push(zh ? `问题基线体检 · ${file}` : `Question baseline audit · ${file}`, '');
+  L.push(zh ? `- 题量：${total} 道（核心 ${core} 道）` : `- Questions: ${total} (gauge ${core})`);
+  L.push(zh
+    ? `- 类型：A ${byType.A}（${pct(byType.A, total)}%）· B ${byType.B}（${pct(byType.B, total)}%）· C ${byType.C}（${pct(byType.C, total)}%）· D ${byType.D}（${pct(byType.D, total)}%）`
+    : `- Types: A ${byType.A} (${pct(byType.A, total)}%) · B ${byType.B} (${pct(byType.B, total)}%) · C ${byType.C} (${pct(byType.C, total)}%) · D ${byType.D} (${pct(byType.D, total)}%)`);
+  if (shapes.length) L.push(zh ? `- 问法：${shapes.join(' / ')}` : `- Shapes: ${shapes.join(' / ')}`);
+  if (templates.length) L.push(zh ? `- 跳过未填写的模板题：${templates.join('、')}` : `- Skipped unfilled template rows: ${templates.join(', ')}`);
+  L.push('');
+  if (fails.length) {
+    L.push(zh ? '**fail（先改这些，现在采样出来的数不能用）**' : '**fail (fix these first; sampling now would produce unusable numbers)**', '');
+    for (const f of fails) L.push(`- ${f.id ? `[${f.id}] ` : ''}${f.msg}`);
+    L.push('');
+  }
+  if (warns.length) {
+    L.push(zh ? '**warn（可以保留，但要在报告里写清为什么）**' : '**warn (allowed, but say why in the report)**', '');
+    for (const w of warns) L.push(`- ${w.id ? `[${w.id}] ` : ''}${w.msg}`);
+    L.push('');
+  }
+  L.push(fails.length
+    ? (zh ? `结果：${fails.length} 项必须改，${warns.length} 项提醒。改完再跑一次。` : `${fails.length} must fix, ${warns.length} to review. Run again after fixing.`)
+    : (zh ? `结果：没有必须改的问题，${warns.length} 项提醒。可以开始采样。` : `No blockers, ${warns.length} to review. Ready to sample.`));
+  if (passed) L.push(zh ? `（另有 ${passed} 项通过）` : `(${passed} checks passed)`);
+  return L.join('\n');
 }
 
 // ---------------------------------------------------------------- brand detection
@@ -402,7 +602,18 @@ export async function main(argv, { env = process.env, out = console.log, err = c
   const t = M[lang];
   if (o.version) { out(VERSION); return 0; }
   if (o.help || !o.cmd || o.unknown) { out(t.usage); return o.help ? 0 : 2; }
-  if (!['run', 'report'].includes(o.cmd)) { err(t.unknownCmd(o.cmd)); out(t.usage); return 2; }
+  if (!['run', 'report', 'check'].includes(o.cmd)) { err(t.unknownCmd(o.cmd)); out(t.usage); return 2; }
+
+  if (o.cmd === 'check') {
+    if (!o.file) { err(t.need('<questions.csv>')); return 2; }
+    const file = resolve(o.file);
+    if (!existsSync(file)) { err(t.noFile(o.file)); return 2; }
+    const brands = (o.brand || '').split(/[,，]/).map((x) => x.trim()).filter(Boolean);
+    const result = checkQuestions(readFileSync(file, 'utf8'), { brands, lang });
+    if (o.json) { out(JSON.stringify({ ...result, rows: result.rows.length }, null, 2)); return result.fails.length ? 1 : 0; }
+    out(renderCheck(result, o.file, lang));
+    return result.fails.length ? 1 : 0;
+  }
 
   if (o.cmd === 'report') {
     const runsFile = resolve(o.file || join('geo', 'runs.csv'));
