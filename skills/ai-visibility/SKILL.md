@@ -35,9 +35,21 @@ metadata:
 
 以本 `SKILL.md` 所在目录为技能根，模板在 `assets/`，脚本在 `scripts/geo-probe.mjs`（零依赖）。
 
-### 1. 出问题集 → `geo/questions.csv`
+### 1. 出问题基线 → `geo/questions.csv`
 
-按 `references/questions.md` 写，模板见 `assets/questions.csv`。题型分 A（用户不知道品牌，问品类）和 B（知道品牌，问口碑），**A 类是主战场**。5–15 题起步：够看出方向，又能真的问完。记下每题的目标用户是谁、在哪个场景下会问。
+按 `references/questions.md` 写，模板见 `assets/questions.csv`。这一步不是"随手编 20 道题"：问题集本身是测量的一部分，换一套问法结论就会变，所以每道题都要有类型、形状、限定条件、来源、证据等级和判定标准。
+
+- **四类题**：A 不带品牌的推荐（约 40%，主战场）、B 品牌事实（30%）、C 不适合场景（20%，至少 2 道）、D 使用排错（10%）。
+- **两层题集**：12–18 道标 `核心` 的**仪表题**，冻结后只用于报率和复查；另外 10–20 道 `一般` 的**雷达题**每轮可换。
+- **问法形状**至少覆盖 5 种（品类发现、找替代、直接对比、排错……），写法与陷阱见 `references/question-shapes.md`。形状决定 AI 会不会真的去检索：商业意图类提问触发检索的比例远高于"什么是 X"。
+
+写完先体检，再采样：
+
+```bash
+node scripts/geo-probe.mjs check geo/questions.csv --brand "我的品牌,别名"
+```
+
+`fail` 有就退出码 1，说明这批题现在采样出来的数不能用（最常见：A 类题里写了自家品牌名、C 类为 0、题量不足 12、证据等级非法）。`warn` 不阻塞，但要在报告里写清为什么保留。
 
 ### 2. 采样 → `geo/runs/<批次>/` + `geo/runs.csv`
 
@@ -68,7 +80,7 @@ node scripts/geo-probe.mjs report geo/runs.csv --out geo/report-2026-11-16.md
 
 ## 没有脚本或不能联网时
 
-- 不能跑 `geo-probe`：用用户贴回来的回答做同样的统计，手工记进 `runs.csv`（格式见模板），并注明"人工采样"。
+- 不能跑 `geo-probe`：用用户贴回来的回答做同样的统计，手工记进 `runs.csv`（格式见模板），并注明"人工采样"；问题集则按 `references/questions.md` 末尾的检查项逐条人工核对，核对不了的项目写明"未验证"。
 - 不能联网：只做问题集和统计，把"要去哪个 AI、问哪几题"写成清单交给用户；不要凭空写出回答。
 
 参考 `references/ai-sources-cn.md`（国内 AI 从哪些平台取信息）和 `references/ai-sources-global.md`（ChatGPT、Claude、Perplexity、Google、Copilot 的来源与要放行的爬虫），用来解释"为什么它读的是那几个站"。

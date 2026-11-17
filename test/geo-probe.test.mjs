@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseCsv, loadQuestions, parseBrands, judgeBrand, analyse, summarize, main, ask, PROVIDERS } from '../cli/geo-probe.mjs';
+import { parseCsv, loadQuestions, parseBrands, judgeBrand, analyse, summarize, main, ask, PROVIDERS, checkQuestions, QUESTION_SHAPES } from '../cli/geo-probe.mjs';
 
 const QUESTIONS = `id,类型,问题,判定标准,对应事实,优先级,来源类型,来源
 Q01,A 不带品牌的推荐,有没有不用联网也能用的记账 App？,提到并推荐我们,F01,核心,用户原话,客服记录
@@ -240,4 +240,103 @@ test('ask: Qwen turns web search on; other providers get a plain request', async
   assert.deepEqual(bodies[0].search_options, { forced_search: true });
   await ask(PROVIDERS.kimi, { base: 'http://x', key: 'k', model: 'kimi-latest', question: 'q', maxTokens: 100, fetchImpl });
   assert.deepEqual(Object.keys(bodies[1]).sort(), ['max_tokens', 'messages', 'model']);
+});
+
+// ---------------------------------------------------------------- question baseline
+
+const HEADER = 'id,类型,形状,问题,判定标准,对应事实,优先级,来源类型,来源,证据等级';
+const baseline = (rows) => `${HEADER}\n${rows.join('\n')}\n`;
+const file = (name, text) => {
+  const dir = mkdtempSync(join(tmpdir(), 'geo-check-')); cleanup.push(dir);
+  const p = join(dir, name); writeFileSync(p, text); return p;
+};
+
+// 12 questions, 5/4/2/1 across A/B/C/D, every row with a verdict rule and a source. This is what a
+// defensible first baseline looks like: nothing here is a style opinion, so nothing should fail.
+const GOOD = baseline([
+  'Q01,A 不带品牌的推荐,品类发现,20 人团队用什么知识库，预算一个月 500 以内,回答里出现我们并描述正确,F01,核心,客服,工单 #2311,2',
+  'Q02,A 不带品牌的推荐,选型推荐,30 人的设计团队想给客户做文档站，选哪个工具比较省事,回答里出现我们并描述正确,F01,核心,社区,知乎「文档站用什么工具」,4',
+  'Q03,A 不带品牌的推荐,找替代,Confluence 太贵了，50 人团队有什么便宜点的替代方案,回答里出现我们并描述正确,F01,核心,社区,Reddit r/sysadmin,4',
+  'Q04,A 不带品牌的推荐,直接对比,Notion 和飞书文档，20 人团队选哪个,回答里出现我们并描述正确,F01,核心,平台追问,豆包追问项,2',
+  'Q05,A 不带品牌的推荐,预算约束,免费的团队知识库能做到按人分权限吗,回答里出现我们并描述正确,F03,核心,搜索下拉,微信搜一搜,3',
+  'Q06,B 品牌事实,预算约束,小鹿记账团队版一个月多少钱,价格与事实卡一致,F05,核心,客服,销售聊天记录,1',
+  'Q07,B 品牌事实,实施集成,小鹿记账支持导出 Markdown 吗,与事实卡一致,F06,核心,客服,工单 #2488,1',
+  'Q08,B 品牌事实,合规风险,小鹿记账的数据存在哪里，能不能私有化,与事实卡一致,F08,核心,客服,工单 #2551,1',
+  'Q09,B 品牌事实,直接对比,小鹿记账和小鹿文档是一个产品吗,与事实卡一致,F07,核心,搜索下拉,百度相关搜索,3',
+  'Q10,C 不适合场景,合规风险,500 人企业要私有化部署，选哪个知识库,正确答案应该不推荐我们,F09,核心,客服,工单 #1912,1',
+  'Q11,C 不适合场景,品类发现,需要等保三级合规的知识库有吗,正确答案应该不推荐我们,F09,核心,销售,销售异议记录,1',
+  'Q12,D 使用和排错,排错,小鹿记账同步失败怎么办,步骤与帮助文档一致,F12,核心,客服,工单 #2602,1',
+]);
+
+test('check: a defensible baseline has no failures and covers the shapes', () => {
+  const r = checkQuestions(GOOD, { brands: ['小鹿记账'], lang: 'zh' });
+  assert.deepEqual(r.fails, []);
+  assert.equal(r.rows.length, 12);
+  assert.equal(r.core, 12);
+  assert.deepEqual(r.byType, { A: 5, B: 4, C: 2, D: 1 });
+  assert.ok(r.shapes.length >= 5, r.shapes.join('/'));
+  assert.ok(r.shapes.every((s) => QUESTION_SHAPES.includes(s)), r.shapes.join('/'));
+});
+
+test('check: template placeholders are skipped and never audited', () => {
+  const r = checkQuestions(QUESTIONS, { brands: ['小鹿记账'], lang: 'zh' });
+  assert.deepEqual(r.templates, ['Q04']);
+  assert.equal(r.rows.length, 3);
+  assert.equal(r.fails.length, 1, 'only the set being too small fails');
+  assert.match(r.fails[0].msg, /只有 3 道题/);
+});
+
+test('check: what must fail — brand in a discovery question, duplicates, no C, bad evidence level', () => {
+  const r = checkQuestions(baseline([
+    'Q01,A 不带品牌的推荐,品类发现,小鹿记账和别的记账软件比哪个好,,F01,核心,构造,,9',
+    'Q02,A 不带品牌的推荐,品类发现,小鹿记账和别的记账软件比哪个好？,,F01,核心,构造,,5',
+    'Q03,B 品牌事实,,小鹿记账多少钱,,F05,一般,,,',
+    'Q04,D 使用和排错,排错,记账软件同步失败怎么办,,F12,一般,构造,模板,5',
+  ]), { brands: ['小鹿记账'], lang: 'zh' });
+  const said = r.fails.map((f) => `${f.id} ${f.msg}`).join('\n');
+  assert.match(said, /只有 4 道题/);
+  assert.match(said, /一道 C 类题都没有/);
+  assert.match(said, /Q01.*品牌名/);
+  assert.match(said, /Q02.*品牌名/);
+  assert.match(said, /Q02.*完全重复/);
+  assert.match(said, /Q01.*证据等级「9」无效/);
+});
+
+test('check: warnings point at wording and missing provenance, and never change the exit code', () => {
+  const r = checkQuestions(baseline([
+    'Q01,A 不带品牌的推荐,品类发现,请推荐好用的记账软件,,,一般,构造,,5',
+    'Q02,B 品牌事实,预算约束,小鹿记账多少钱,价格一致,F05,核心,客服,聊天记录,1',
+  ]), { brands: [], lang: 'zh' });
+  const said = r.warns.map((w) => `${w.id} ${w.msg}`).join('\n');
+  assert.match(said, /Q01.*诱导措辞/);
+  assert.match(said, /Q01.*没有判定标准/);
+  assert.match(said, /Q01.*没有来源/);
+  assert.match(said, /构造/);
+});
+
+test('check: exit 0 on a good set, 1 on a failing one, 2 without a file', async () => {
+  const good = file('good.csv', GOOD);
+  const ok = await run(['check', good, '--brand', '小鹿记账']);
+  assert.equal(ok.code, 0, ok.out);
+  assert.match(ok.out, /题量：12 道（核心 12 道）/);
+  assert.match(ok.out, /可以开始采样/);
+
+  const bad = file('bad.csv', baseline(['Q01,A 不带品牌的推荐,品类发现,小鹿记账好用吗,,F01,核心,构造,,9']));
+  const no = await run(['check', bad, '--brand', '小鹿记账']);
+  assert.equal(no.code, 1);
+  assert.match(no.out, /先改这些/);
+
+  const missing = await run(['check', join(tmpdir(), 'nope-not-here.csv')]);
+  assert.equal(missing.code, 2);
+  assert.match(missing.err, /找不到文件/);
+});
+
+test('check: --brand with no flag cannot run the brand-leak rule, and --json reports counts', async () => {
+  const p = file('leak.csv', baseline(['Q01,A 不带品牌的推荐,品类发现,小鹿记账和别的比哪个好,,F01,核心,构造,,9']));
+  const blind = await run(['check', p, '--json']);
+  const parsed = JSON.parse(blind.out);
+  assert.equal(typeof parsed.rows, 'number', 'JSON reports a count, not the rows');
+  assert.equal(parsed.rows, 1);
+  assert.equal(parsed.fails.some((f) => /品牌名/.test(f.msg)), false, 'no brand given, no leak rule');
+  assert.equal(blind.code, 1);
 });
