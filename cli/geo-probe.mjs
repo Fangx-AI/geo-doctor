@@ -47,9 +47,12 @@ const M = {
   geo-probe run <questions.csv> --ai deepseek,qwen --brand "品牌,别名" [--competitors "竞品甲,竞品乙"]
   geo-probe report [runs.csv] [--batch 批次] [--questions questions.csv] [--out 文件]
   geo-probe check <questions.csv> [--brand "品牌,别名"]
+  geo-probe matrix <questions.csv>
 
 check 检查问题基线本身：题量、类型配比、核心题、重复、诱导、A 类题里的品牌名、缺限定条件、证据来源。
 有 fail 时退出码 1；warn 不影响退出码，但要写清为什么保留。
+
+matrix 把题目排成「场景 × 旅程」矩阵（探索/选型/对比/口碑），空格就是下一步该写的地方。
 
 run 选项：
   --ai 列表            要问的 AI，逗号分隔，可写 名称:模型。可选：${Object.keys(PROVIDERS).join('、')}
@@ -93,9 +96,12 @@ Usage:
   geo-probe run <questions.csv> --ai deepseek,openai --brand "Brand,alias" [--competitors "Rival A,Rival B"]
   geo-probe report [runs.csv] [--batch name] [--questions questions.csv] [--out file]
   geo-probe check <questions.csv> [--brand "Brand,alias"]
+  geo-probe matrix <questions.csv>
 
 check audits the question set itself: size, type mix, gauge questions, duplicates, leading wording, brand names in discovery questions,
 missing constraints, and where each question came from. Exit 1 when something must be fixed; warnings keep exit 0 but need a reason.
+
+matrix lays the set out as scenario × journey (探索/选型/对比/口碑); the empty cells are what to write next.
 
 run options:
   --ai list             AIs to ask, comma-separated, optionally name:model. Known: ${Object.keys(PROVIDERS).join(', ')}
@@ -180,8 +186,13 @@ export function loadQuestions(text) {
 // (both A) and still test different things, because a comparison question and a discovery question
 // make the engine behave differently.
 export const QUESTION_SHAPES = ['认知定义', '品类发现', '选型推荐', '直接对比', '找替代', '预算约束', '实施集成', '排错', '合规风险', '本地时效'];
+
+// Journeys are the stage of the decision a question sits in. A set that only covers one stage
+// measures one stage, and averaging across stages hides both the strength and the hole: a store can
+// win every 口碑 question and appear in none of the 选型 ones that actually bring the customer.
+export const JOURNEYS = ['探索', '选型', '对比', '口碑'];
 const LEADING = /请(帮我)?推荐|推荐一下|最好的|最强的|最值得|哪家最好|排名第一|一定要选/i;
-const QUALIFIER = /[\d一二三四五六七八九十]+\s*(人|元|块|万|千|个|天|小时|月|年|万)|预算|以内|以下|左右|不超过|便宜|低价|性价比|省钱|不花钱|小团队|初创|中小企业|大企业|个人|家用|免费|开源|离线|不用联网|断网|私有化|合规|等保|跨境|出海|微信|小程序|iOS|Android|Windows|macOS|远程|上门|线下|附近|本地|北京|上海|广州|深圳|杭州|成都|武汉|南京|西安|重庆|苏州|天津/i;
+const QUALIFIER = /[\d一二三四五六七八九十]+\s*(人|元|块|万|千|个|天|小时|月|年|万)|预算|以内|以下|左右|不超过|便宜|低价|性价比|省钱|不花钱|小团队|初创|中小企业|大企业|个人|家用|免费|开源|离线|不用联网|断网|私有化|合规|等保|跨境|出海|微信|小程序|iOS|Android|Windows|macOS|远程|上门|线下|附近|本地|北京|上海|广州|深圳|杭州|成都|武汉|南京|西安|重庆|苏州|天津|豆包|元宝|DeepSeek|ChatGPT|GPT|Kimi|通义|千问|文心|Perplexity|Gemini|Claude|Copilot|AI 搜索|AI 助手|[\u4e00-\u9fa5]{2,8}(区|县|镇|商圈|大学城|路|街|地铁站)/i;
 const CORE = /核心|仪表|gauge/i;
 const TARGET = { A: 0.4, B: 0.3, C: 0.2, D: 0.1 };
 
@@ -197,6 +208,49 @@ const overlap = (a, b) => {
   return n / (a.size + b.size - n);
 };
 const pct = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : 0);
+
+// What each stage can tell you once you have sampled it. This is why the stages are kept apart:
+// a 探索 answer that cites your page and a 选型 answer that ranks you third are different evidence,
+// and averaging them produces a number nobody can act on.
+export const JOURNEY_MEANING = {
+  探索: { says: '你的内容有没有被引用', empty: 'AI 讲品类时很难提到你' },
+  选型: { says: '进不进名单、排第几', empty: '客户真正在挑的时候看不到你' },
+  对比: { says: '对位胜率', empty: '分不清被顺带一提还是被正面对比' },
+  口碑: { says: '情感倾向与负面拦截', empty: '不知道 AI 怎么描述你，负面也没人拦' },
+};
+
+// The scenario × journey grid. Two questions in the same cell test the same thing; two questions in
+// different cells test different things, which is why a flat count hides where the set is empty.
+export function buildMatrix(text) {
+  const rows = [];
+  parseCsv(text).forEach((r, i) => {
+    const question = (r['问题'] || r.question || '').trim();
+    if (!question || /^[（(].*[）)]$/.test(question) || /待填写|TODO/.test(question)) return;
+    rows.push({
+      id: (r.id || r.ID || '').trim() || `#${i + 1}`,
+      scenario: (r['场景'] || r.scenario || '').trim(),
+      journey: (r['旅程'] || r.journey || '').trim(),
+      question,
+    });
+  });
+  const scenarios = []; const cells = {}; const loose = [];
+  for (const q of rows) {
+    if (!q.scenario) { if (q.journey) loose.push(q); continue; }
+    if (!JOURNEYS.includes(q.journey)) { loose.push(q); continue; }
+    if (!scenarios.includes(q.scenario)) scenarios.push(q.scenario);
+    cells[q.scenario] ||= Object.fromEntries(JOURNEYS.map((j) => [j, []]));
+    cells[q.scenario][q.journey].push(q.id);
+  }
+  const gaps = []; let filled = 0; let total = 0;
+  for (const s of scenarios) {
+    for (const j of JOURNEYS) {
+      total++;
+      if ((cells[s][j] || []).length) filled++;
+      else gaps.push({ scenario: s, journey: j });
+    }
+  }
+  return { rows, scenarios, cells, gaps, loose, filled, total };
+}
 
 // Audit a question set before it is sampled. Everything here is mechanical on purpose: a question
 // you cannot check is a question you cannot defend in a report.
@@ -217,6 +271,8 @@ export function checkQuestions(text, { brands = [], lang = 'zh' } = {}) {
       sourceKind: (r['来源类型'] || r.sourceKind || r.source_kind || '').trim(),
       source: (r['来源'] || r.source || '').trim(),
       evidence: (r['证据等级'] || r.evidence || '').trim(),
+      scenario: (r['场景'] || r.scenario || '').trim(),
+      journey: (r['旅程'] || r.journey || '').trim(),
     };
     if (!q.question) return;
     if (/^[（(].*[）)]$/.test(q.question) || /待填写|TODO/.test(q.question)) { templates.push(q.id); return; }
@@ -333,7 +389,37 @@ export function checkQuestions(text, { brands = [], lang = 'zh' } = {}) {
   else if (shapes.size < 5) W('', zh ? `只用了 ${shapes.size} 种问法：建议至少 5 种，因为不同问法测到的机制不同` : `Only ${shapes.size} shapes; at least 5 is safer because different shapes exercise different machinery`);
   else passed++;
 
-  return { rows, templates, byType, core: core.length, shapes: [...shapes], fails, warns, passed };
+  // Coverage: a set can pass every check above and still be blind to half the decision. Counts are
+  // per scenario × journey cell, so the holes are visible before sampling, not after.
+  const matrix = buildMatrix(text);
+  for (const q of rows) {
+    if (q.journey && !q.scenario) W(q.id, zh ? '填了旅程但没有场景：落不进矩阵，看不出它替哪个格子挡缺口' : 'Journey without a scenario: it fits no cell, so it is unclear which gap it covers');
+    else if (q.scenario && !q.journey) W(q.id, zh ? '填了场景但没有旅程：落不进矩阵，看不出它在决策的哪一段' : 'Scenario without a journey: it fits no cell, so the decision stage is unclear');
+    else if (q.journey && !JOURNEYS.includes(q.journey)) W(q.id, zh ? `旅程「${q.journey}」不认识，只能是 ${JOURNEYS.join(' / ')}` : `Unknown journey "${q.journey}"; use ${JOURNEYS.join(' / ')}`);
+    else if (q.scenario) passed++;
+  }
+  if (!matrix.scenarios.length) {
+    W('', zh ? '没有填「场景」「旅程」两列：只能检查题量，看不出哪个格子是空的（做法见 references/scenario-matrix.md）' : 'No scenario/journey columns: only the count can be checked, not which cell is empty (see references/scenario-matrix.md)');
+  } else {
+    const seen = new Set();
+    for (const s of matrix.scenarios) {
+      const row = matrix.cells[s];
+      for (const j of JOURNEYS) if (row[j].length) seen.add(j);
+      if (!row['选型'].length) {
+        W(s, zh ? `场景「${s}」没有选型题：客户真正在挑的时候看不到你，前面几格写得再好也接不住` : `Scenario "${s}" has no selection question: nothing catches the customer while they are choosing`);
+      }
+    }
+    for (const j of JOURNEYS) {
+      if (seen.has(j)) continue;
+      W('', zh ? `整个题集没有${j}题：${JOURNEY_MEANING[j].empty}` : `No ${j} questions at all: ${JOURNEY_MEANING[j].empty}`);
+    }
+    const ratio = matrix.total ? matrix.filled / matrix.total : 0;
+    if (ratio < 0.4) {
+      W('', zh ? `矩阵只覆盖 ${matrix.filled}/${matrix.total} 格（${Math.round(ratio * 100)}%）：先补选型那一列，再补对比` : `The matrix covers ${matrix.filled}/${matrix.total} cells (${Math.round(ratio * 100)}%); fill the selection column first, then comparison`);
+    } else passed++;
+  }
+
+  return { rows, templates, byType, core: core.length, shapes: [...shapes], matrix, fails, warns, passed };
 }
 
 export function renderCheck(result, file, lang = 'zh') {
@@ -347,6 +433,14 @@ export function renderCheck(result, file, lang = 'zh') {
     ? `- 类型：A ${byType.A}（${pct(byType.A, total)}%）· B ${byType.B}（${pct(byType.B, total)}%）· C ${byType.C}（${pct(byType.C, total)}%）· D ${byType.D}（${pct(byType.D, total)}%）`
     : `- Types: A ${byType.A} (${pct(byType.A, total)}%) · B ${byType.B} (${pct(byType.B, total)}%) · C ${byType.C} (${pct(byType.C, total)}%) · D ${byType.D} (${pct(byType.D, total)}%)`);
   if (shapes.length) L.push(zh ? `- 问法：${shapes.join(' / ')}` : `- Shapes: ${shapes.join(' / ')}`);
+  if (result.matrix && result.matrix.scenarios.length) {
+    const m = result.matrix;
+    L.push(zh ? `- 矩阵：${m.scenarios.length} 个场景 × ${JOURNEYS.length} 段，覆盖 ${m.filled}/${m.total} 格` : `- Matrix: ${m.scenarios.length} scenarios × ${JOURNEYS.length} stages, ${m.filled}/${m.total} cells filled`);
+    if (m.gaps.length) {
+      const head = m.gaps.slice(0, 6).map((g) => `${g.scenario}·${g.journey}`).join('、');
+      L.push(zh ? `- 空格：${head}${m.gaps.length > 6 ? ` 等 ${m.gaps.length} 处（geo-probe matrix 看全表）` : ''}` : `- Empty cells: ${head}${m.gaps.length > 6 ? ` and ${m.gaps.length - 6} more (run geo-probe matrix)` : ''}`);
+    }
+  }
   if (templates.length) L.push(zh ? `- 跳过未填写的模板题：${templates.join('、')}` : `- Skipped unfilled template rows: ${templates.join(', ')}`);
   L.push('');
   if (fails.length) {
@@ -363,6 +457,44 @@ export function renderCheck(result, file, lang = 'zh') {
     ? (zh ? `结果：${fails.length} 项必须改，${warns.length} 项提醒。改完再跑一次。` : `${fails.length} must fix, ${warns.length} to review. Run again after fixing.`)
     : (zh ? `结果：没有必须改的问题，${warns.length} 项提醒。可以开始采样。` : `No blockers, ${warns.length} to review. Ready to sample.`));
   if (passed) L.push(zh ? `（另有 ${passed} 项通过）` : `(${passed} checks passed)`);
+  return L.join('\n');
+}
+
+// The grid on its own, for deciding what to write next. Empty cells are the work order; they are
+// not errors, because a scenario may legitimately have nothing to say in a stage.
+export function renderMatrix(matrix, lang = 'zh') {
+  const zh = lang !== 'en';
+  const L = [];
+  if (!matrix.scenarios.length) {
+    L.push(zh ? '没有可排的矩阵：题集里没有同时填了「场景」和「旅程」的题。' : 'Nothing to lay out: no question has both a scenario and a journey.');
+    if (matrix.loose.length) L.push(zh ? `有 ${matrix.loose.length} 道题缺其中一列：${matrix.loose.map((q) => q.id).join('、')}` : `${matrix.loose.length} questions are missing one of the two: ${matrix.loose.map((q) => q.id).join(', ')}`);
+    return L.join('\n');
+  }
+  L.push(zh ? `问题矩阵 · ${matrix.scenarios.length} 个场景 × ${JOURNEYS.length} 段旅程 · 覆盖 ${matrix.filled}/${matrix.total} 格` : `Question matrix · ${matrix.scenarios.length} scenarios × ${JOURNEYS.length} stages · ${matrix.filled}/${matrix.total} cells`, '');
+  L.push(`| ${zh ? '场景' : 'Scenario'} | ${JOURNEYS.join(' | ')} |`);
+  L.push(`|${'---|'.repeat(JOURNEYS.length + 1)}`);
+  for (const s of matrix.scenarios) {
+    const row = matrix.cells[s];
+    L.push(`| ${s} | ${JOURNEYS.map((j) => (row[j].length ? row[j].join(' ') : '—')).join(' | ')} |`);
+  }
+  L.push('');
+  L.push(zh ? '**每段能读出什么**' : '**What each stage can tell you**');
+  for (const j of JOURNEYS) {
+    const mine = matrix.scenarios.reduce((n, s) => n + matrix.cells[s][j].length, 0);
+    L.push(zh ? `- ${j}（${mine} 道）：看${JOURNEY_MEANING[j].says}${mine ? '' : `；现在一条都没有，${JOURNEY_MEANING[j].empty}`}` : `- ${j} (${mine}): ${JOURNEY_MEANING[j].says}${mine ? '' : `; empty now, so ${JOURNEY_MEANING[j].empty}`}`);
+  }
+  L.push('');
+  if (matrix.gaps.length) {
+    const selection = matrix.gaps.filter((g) => g.journey === '选型');
+    const comparison = matrix.gaps.filter((g) => g.journey === '对比');
+    L.push(zh ? '**先补这些**' : '**Fill these first**');
+    for (const g of selection) L.push(zh ? `- ${g.scenario} · 选型：${JOURNEY_MEANING['选型'].empty}` : `- ${g.scenario} · selection: ${JOURNEY_MEANING['选型'].empty}`);
+    for (const g of comparison) L.push(zh ? `- ${g.scenario} · 对比：${JOURNEY_MEANING['对比'].empty}` : `- ${g.scenario} · comparison: ${JOURNEY_MEANING['对比'].empty}`);
+    const rest = matrix.gaps.filter((g) => g.journey !== '选型' && g.journey !== '对比');
+    if (rest.length) L.push(zh ? `- 其余 ${rest.length} 格：${rest.map((g) => `${g.scenario} · ${g.journey}`).join('、')}` : `- ${rest.length} more: ${rest.map((g) => `${g.scenario} / ${g.journey}`).join(', ')}`);
+    L.push('');
+  }
+  if (matrix.loose.length) L.push(zh ? `落不进矩阵的题：${matrix.loose.map((q) => q.id).join('、')}（缺场景或旅程，或旅程写错）` : `Outside the matrix: ${matrix.loose.map((q) => q.id).join(', ')} (missing or invalid scenario/journey)`);
   return L.join('\n');
 }
 
@@ -602,7 +734,17 @@ export async function main(argv, { env = process.env, out = console.log, err = c
   const t = M[lang];
   if (o.version) { out(VERSION); return 0; }
   if (o.help || !o.cmd || o.unknown) { out(t.usage); return o.help ? 0 : 2; }
-  if (!['run', 'report', 'check'].includes(o.cmd)) { err(t.unknownCmd(o.cmd)); out(t.usage); return 2; }
+  if (!['run', 'report', 'check', 'matrix'].includes(o.cmd)) { err(t.unknownCmd(o.cmd)); out(t.usage); return 2; }
+
+  if (o.cmd === 'matrix') {
+    if (!o.file) { err(t.need('<questions.csv>')); return 2; }
+    const file = resolve(o.file);
+    if (!existsSync(file)) { err(t.noFile(o.file)); return 2; }
+    const matrix = buildMatrix(readFileSync(file, 'utf8'));
+    if (o.json) { out(JSON.stringify(matrix, null, 2)); return 0; }
+    out(renderMatrix(matrix, lang));
+    return 0;
+  }
 
   if (o.cmd === 'check') {
     if (!o.file) { err(t.need('<questions.csv>')); return 2; }

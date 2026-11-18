@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseCsv, loadQuestions, parseBrands, judgeBrand, analyse, summarize, main, ask, PROVIDERS, checkQuestions, QUESTION_SHAPES } from '../cli/geo-probe.mjs';
+import { parseCsv, loadQuestions, parseBrands, judgeBrand, analyse, summarize, main, ask, PROVIDERS, checkQuestions, QUESTION_SHAPES, buildMatrix } from '../cli/geo-probe.mjs';
 
 const QUESTIONS = `id,类型,问题,判定标准,对应事实,优先级,来源类型,来源
 Q01,A 不带品牌的推荐,有没有不用联网也能用的记账 App？,提到并推荐我们,F01,核心,用户原话,客服记录
@@ -331,6 +331,13 @@ test('check: exit 0 on a good set, 1 on a failing one, 2 without a file', async 
   assert.match(missing.err, /找不到文件/);
 });
 
+test('check: naming the AI platform counts as a constraint, so that warning stays quiet', () => {
+  const r = checkQuestions(baseline([
+    'Q01,A 不带品牌的推荐,品类发现,DeepSeek 的回答和我用 App 看到的推荐一样吗,,F02,核心,社区,issue #29,1',
+  ]), { brands: [], lang: 'zh' });
+  assert.equal(r.warns.some((w) => /限定条件/.test(w.msg)), false);
+});
+
 test('check: --brand with no flag cannot run the brand-leak rule, and --json reports counts', async () => {
   const p = file('leak.csv', baseline(['Q01,A 不带品牌的推荐,品类发现,小鹿记账和别的比哪个好,,F01,核心,构造,,9']));
   const blind = await run(['check', p, '--json']);
@@ -339,4 +346,83 @@ test('check: --brand with no flag cannot run the brand-leak rule, and --json rep
   assert.equal(parsed.rows, 1);
   assert.equal(parsed.fails.some((f) => /品牌名/.test(f.msg)), false, 'no brand given, no leak rule');
   assert.equal(blind.code, 1);
+});
+
+// ---------------------------------------------------------------- scenario × journey matrix
+
+const MATRIX_HEADER = 'id,类型,形状,问题,判定标准,对应事实,优先级,来源类型,来源,证据等级,场景,旅程';
+
+test('matrix: cells are counted per scenario and journey, and empty cells are the gaps', () => {
+  const m = buildMatrix([
+    MATRIX_HEADER,
+    'Q01,A 不带品牌的推荐,选型推荐,杭州下沙能坐五个人的网咖,,F01,核心,构造,x,5,开黑组队,选型',
+    'Q02,A 不带品牌的推荐,选型推荐,杭州包夜 40 以内的网咖,,F02,核心,构造,x,5,通宵包夜,选型',
+    'Q03,B 品牌事实,直接对比,我们和网鱼哪个好,,F03,一般,构造,x,5,通宵包夜,对比',
+    'Q04,B 品牌事实,认知定义,我们能洗澡吗,,F04,一般,构造,x,5,通宵包夜,口碑',
+  ].join('\n'));
+  assert.deepEqual(m.scenarios, ['开黑组队', '通宵包夜']);
+  assert.deepEqual(m.cells['通宵包夜']['选型'], ['Q02']);
+  assert.equal(m.total, 8, 'two scenarios × four journeys');
+  assert.equal(m.filled, 4);
+  assert.deepEqual(m.gaps.map((g) => `${g.scenario}/${g.journey}`).sort(), [
+    '开黑组队/口碑', '开黑组队/对比', '开黑组队/探索', '通宵包夜/探索',
+  ]);
+});
+
+test('matrix: rows that fit no cell are reported instead of silently dropped', () => {
+  const m = buildMatrix([
+    MATRIX_HEADER,
+    'Q01,A 不带品牌的推荐,选型推荐,有地图吗,,F01,核心,构造,x,5,开黑组队,',
+    'Q02,A 不带品牌的推荐,选型推荐,有地图吗,,F01,核心,构造,x,5,,选型',
+    'Q03,A 不带品牌的推荐,选型推荐,有地图吗,,F01,核心,构造,x,5,开黑组队,试用',
+    'Q04,A 不带品牌的推荐,选型推荐,（还没填）,（占位）,F01,核心,构造,x,,开黑组队,探索',
+  ].join('\n'));
+  assert.deepEqual(m.scenarios, []);
+  assert.deepEqual(m.loose.map((q) => q.id), ['Q01', 'Q02', 'Q03'], 'template rows are not questions');
+});
+
+test('check: a scenario without a selection question is a warning, not a failure', () => {
+  const rows = [
+    'Q01,A 不带品牌的推荐,选型推荐,杭州下沙能坐五个人的网咖,,F01,核心,社区,知乎,4,开黑组队,选型',
+    'Q02,B 品牌事实,认知定义,我们能洗澡吗,,F04,一般,社区,知乎,4,过夜赶车,口碑',
+    'Q03,B 品牌事实,直接对比,我们和网鱼哪个好,,F03,一般,社区,知乎,4,过夜赶车,对比',
+    'Q04,C 不适合场景,合规风险,未成年人能来吗,,F05,核心,社区,知乎,4,过夜赶车,探索',
+    'Q05,D 使用和排错,排错,包夜能续吗,,F06,一般,社区,知乎,4,赛事团建,探索',
+  ];
+  const r = checkQuestions([MATRIX_HEADER, ...rows].join('\n'), { brands: [], lang: 'zh' });
+  assert.equal(r.fails.every((f) => /只有 \d+ 道题/.test(f.msg)), true, JSON.stringify(r.fails));
+  const said = r.warns.map((w) => `${w.id} ${w.msg}`).join('\n');
+  assert.match(said, /过夜赶车.*没有选型题/);
+  assert.doesNotMatch(said, /开黑组队.*没有选型题/);
+});
+
+test('check: without the two columns it says so once, instead of guessing a matrix', () => {
+  const r = checkQuestions(GOOD, { brands: ['小鹿记账'], lang: 'zh' });
+  const said = r.warns.map((w) => w.msg).join('\n');
+  assert.match(said, /没有填「场景」「旅程」两列/);
+  assert.equal(r.matrix.scenarios.length, 0);
+});
+
+test('matrix command: prints the grid and the empty cells, and --json returns the structure', async () => {
+  const p = file('m.csv', [
+    MATRIX_HEADER,
+    'Q01,A 不带品牌的推荐,选型推荐,杭州下沙能坐五个人的网咖,,F01,核心,构造,x,5,开黑组队,选型',
+    'Q02,B 品牌事实,直接对比,我们和网鱼哪个宽敞,,F03,一般,构造,x,5,开黑组队,对比',
+  ].join('\n'));
+  const human = await run(['matrix', p]);
+  assert.equal(human.code, 0, human.out);
+  assert.match(human.out, /\| 场景 \| 探索 \| 选型 \| 对比 \| 口碑 \|/);
+  assert.match(human.out, /\| 开黑组队 \| — \| Q01 \| Q02 \| — \|/);
+  assert.match(human.out, /先补这些/);
+  assert.match(human.out, /开黑组队 · 探索/);
+  assert.match(human.out, /开黑组队 · 口碑/);
+  assert.doesNotMatch(human.out, /开黑组队 · 选型/);
+
+  const asJson = await run(['matrix', p, '--json']);
+  const parsed = JSON.parse(asJson.out);
+  assert.deepEqual(parsed.scenarios, ['开黑组队']);
+  assert.equal(parsed.filled, 2);
+
+  const missing = await run(['matrix', join(tmpdir(), 'nope-matrix.csv')]);
+  assert.equal(missing.code, 2);
 });
