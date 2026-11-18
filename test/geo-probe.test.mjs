@@ -426,3 +426,96 @@ test('matrix command: prints the grid and the empty cells, and --json returns th
   const missing = await run(['matrix', join(tmpdir(), 'nope-matrix.csv')]);
   assert.equal(missing.code, 2);
 });
+
+// ---------------------------------------------------------------- keyword layer
+
+const KW_HEADER = '关键词,场景,意图,旅程,聚类,落地页,来源类型,来源,证据等级';
+const kw = (rows) => `${KW_HEADER}\n${rows.join('\n')}\n`;
+const GOOD_KW = kw([
+  '团队知识库,协作,信息型,探索,知识库,缺,客服,工单 #2311,2',
+  '知识库对比,协作,商业调研型,对比,选型对比,缺,行业,行业盘点文章,5',
+  '小鹿记账,品牌,导航型,口碑,品牌口碑,https://example.com/,官网,官网首页,1',
+]);
+
+test('checkKeywords: a defensible table passes and the empty-page run is reported once', async () => {
+  const p = file('keywords.csv', GOOD_KW);
+  const r = await run(['keywords', p, '--brand', '小鹿记账', '--lang', 'zh']);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /词量：3 个/);
+  assert.match(r.out, /信息型 1 · 商业调研型 1 · 交易型 0 · 导航型 1/);
+  // Two words have no landing page; they are one work order, not two separate warnings.
+  assert.match(r.out, /2 个词没有落地页/);
+});
+
+test('checkKeywords: intent is the four standard types, and a bad one is a fail', async () => {
+  const p = file('bad.csv', kw([
+    '团队知识库,协作,想知道,探索,知识库,缺,客服,工单,2',
+    '团队知识库,协作,信息型,探索,知识库,缺,客服,工单,2',
+  ]));
+  const r = await run(['keywords', p, '--lang', 'zh']);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /意图「想知道」不是四类之一/);
+  assert.match(r.out, /关键词「团队知识库」重复/);
+});
+
+test('checkKeywords: an informational word must not carry the brand; a navigational one should', async () => {
+  const p = file('brand.csv', kw([
+    '小鹿记账好用吗,品牌,信息型,探索,品牌口碑,缺,构造,,5',
+    '团队知识库,品牌,导航型,口碑,品牌口碑,缺,构造,,5',
+  ]));
+  const r = await run(['keywords', p, '--brand', '小鹿记账', '--lang', 'zh']);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /信息型词却带品牌名/);
+  assert.match(r.out, /标成导航型却没有品牌名/);
+});
+
+test('checkKeywords: a cluster that spans two stages is a grouping mistake', async () => {
+  const p = file('cluster.csv', kw([
+    '团队知识库,协作,信息型,探索,知识库,缺,客服,工单,2',
+    '团队知识库哪个好,协作,商业调研型,选型,知识库,缺,客服,工单,2',
+    '小鹿记账,品牌,导航型,口碑,品牌口碑,https://example.com/,官网,官网,1',
+  ]));
+  const r = await run(['keywords', p, '--lang', 'zh']);
+  assert.match(r.out, /聚类「知识库」里跨了 探索 \/ 选型/);
+});
+
+test('checkKeywords: a scenario that only explores needs a choosing word, a brand-only one does not', async () => {
+  const p = file('scene.csv', kw([
+    '团队知识库,协作,信息型,探索,知识库,缺,客服,工单,2',
+    '小鹿记账,品牌,导航型,口碑,品牌口碑,https://example.com/,官网,官网,1',
+  ]));
+  const r = await run(['keywords', p, '--lang', 'zh']);
+  assert.match(r.out, /场景「协作」没有商业调研型或交易型词/);
+  assert.doesNotMatch(r.out, /场景「品牌」没有/);
+});
+
+test('checkKeywords --questions: reports words with no question and questions with no word', async () => {
+  const kp = file('keywords.csv', GOOD_KW);
+  const qp = file('questions.csv', baseline([
+    'Q01,A 不带品牌的推荐,品类发现,20 人团队用什么知识库，预算 500 以内,出现我们,F01,核心,客服,工单,2',
+  ]).replace('id,类型,形状,问题', 'id,类型,形状,关键词,问题'));
+  const r = await run(['keywords', kp, '--questions', qp, '--lang', 'zh']);
+  const said = r.out;
+  assert.match(said, /与题集对齐/);
+  assert.match(said, /这些词一题都没有/);
+});
+
+test('keywords command: --json returns counts, and a missing file exits 2', async () => {
+  const p = file('keywords.csv', GOOD_KW);
+  const asJson = await run(['keywords', p, '--json']);
+  assert.equal(asJson.code, 0);
+  const parsed = JSON.parse(asJson.out);
+  assert.equal(parsed.rows, 3);
+  assert.deepEqual(parsed.scenarios, ['协作', '品牌']);
+  assert.equal(parsed.clusters.length, 3);
+
+  const missing = await run(['keywords', join(tmpdir(), 'nope-keywords.csv')]);
+  assert.equal(missing.code, 2);
+});
+
+test('keywords: an empty table is a fail, because questions come from words', async () => {
+  const p = file('empty.csv', `${KW_HEADER}\n`);
+  const r = await run(['keywords', p, '--lang', 'zh']);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /关键词表是空的/);
+});

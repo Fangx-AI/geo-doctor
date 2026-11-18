@@ -48,11 +48,15 @@ const M = {
   geo-probe report [runs.csv] [--batch 批次] [--questions questions.csv] [--out 文件]
   geo-probe check <questions.csv> [--brand "品牌,别名"]
   geo-probe matrix <questions.csv>
+  geo-probe keywords <keywords.csv> [--questions questions.csv] [--brand "品牌,别名"]
 
 check 检查问题基线本身：题量、类型配比、核心题、重复、诱导、A 类题里的品牌名、缺限定条件、证据来源。
 有 fail 时退出码 1；warn 不影响退出码，但要写清为什么保留。
 
 matrix 把题目排成「场景 × 旅程」矩阵（探索/选型/对比/口碑），空格就是下一步该写的地方。
+
+keywords 检查关键词表：意图是不是四类标准意图、场景有没有选型词和口碑词、聚类有没有跨段、
+有没有落地页、证据等级；加上 --questions 还能反查「哪些词一题都没有」。词是题的上一层。
 
 run 选项：
   --ai 列表            要问的 AI，逗号分隔，可写 名称:模型。可选：${Object.keys(PROVIDERS).join('、')}
@@ -97,11 +101,16 @@ Usage:
   geo-probe report [runs.csv] [--batch name] [--questions questions.csv] [--out file]
   geo-probe check <questions.csv> [--brand "Brand,alias"]
   geo-probe matrix <questions.csv>
+  geo-probe keywords <keywords.csv> [--questions questions.csv] [--brand "Brand,alias"]
 
 check audits the question set itself: size, type mix, gauge questions, duplicates, leading wording, brand names in discovery questions,
 missing constraints, and where each question came from. Exit 1 when something must be fixed; warnings keep exit 0 but need a reason.
 
 matrix lays the set out as scenario × journey (探索/选型/对比/口碑); the empty cells are what to write next.
+
+keywords audits the table one layer above the questions: the four standard intents, whether each scenario has a
+commercial and a brand word, clusters that span stages, missing landing pages, grades; with --questions it also
+reports which words never became a question.
 
 run options:
   --ai list             AIs to ask, comma-separated, optionally name:model. Known: ${Object.keys(PROVIDERS).join(', ')}
@@ -359,8 +368,12 @@ export function checkQuestions(text, { brands = [], lang = 'zh' } = {}) {
   }
 
   // Constraints: without a budget, size, region or platform, every set collapses into the same generic list.
+  // How-to questions are exempt: breadth is the point there — "how do I stop screws backing out" is
+  // not asked by a smaller company or a larger one, it is asked by anyone with that problem.
+  const LIST_SEEKING = new Set(['品类发现', '选型推荐', '找替代', '直接对比']);
   for (const q of rows) {
     if (q.type !== 'A') continue;
+    if (q.shape && !LIST_SEEKING.has(q.shape)) { passed++; continue; }
     if (QUALIFIER.test(q.question)) { passed++; continue; }
     W(q.id, zh ? 'A 类题没有限定条件（预算/规模/地区/平台）：无限定的问题通常得到泛榜答案，对你的品牌没有区分度' : 'Discovery question has no constraint (budget, size, region, platform); unconstrained questions return the same generic list for everyone');
   }
@@ -405,7 +418,10 @@ export function checkQuestions(text, { brands = [], lang = 'zh' } = {}) {
     for (const s of matrix.scenarios) {
       const row = matrix.cells[s];
       for (const j of JOURNEYS) if (row[j].length) seen.add(j);
-      if (!row['选型'].length) {
+      // A scenario that only ever gets compared or reviewed is a legitimate shape: those questions
+      // are asked about a brand, not about a product line, so they do not need a 选型 stage. Only a
+      // scenario that opens at 探索 has to carry the customer through to 选型.
+      if (row['探索'].length && !row['选型'].length) {
         W(s, zh ? `场景「${s}」没有选型题：客户真正在挑的时候看不到你，前面几格写得再好也接不住` : `Scenario "${s}" has no selection question: nothing catches the customer while they are choosing`);
       }
     }
@@ -495,6 +511,165 @@ export function renderMatrix(matrix, lang = 'zh') {
     L.push('');
   }
   if (matrix.loose.length) L.push(zh ? `落不进矩阵的题：${matrix.loose.map((q) => q.id).join('、')}（缺场景或旅程，或旅程写错）` : `Outside the matrix: ${matrix.loose.map((q) => q.id).join(', ')} (missing or invalid scenario/journey)`);
+  return L.join('\n');
+}
+
+// ---------------------------------------------------------------- keyword layer
+
+// The four intents are the taxonomy every search tool already uses (informational, navigational,
+// commercial investigation, transactional), so a keyword table can move between tools without
+// re-translation. Chinese labels are what the report prints; the aliases let an exported file keep
+// the English names it came with.
+export const KEYWORD_INTENTS = ['信息型', '商业调研型', '交易型', '导航型'];
+export const INTENT_ALIASES = new Map([
+  ['information', '信息型'], ['informational', '信息型'], ['信息', '信息型'],
+  ['commercial', '商业调研型'], ['commercial investigation', '商业调研型'], ['commercial-investigation', '商业调研型'], ['调研', '商业调研型'],
+  ['transactional', '交易型'], ['transaction', '交易型'], ['交易', '交易型'],
+  ['navigational', '导航型'], ['navigation', '导航型'], ['branded', '导航型'], ['品牌', '导航型'],
+]);
+const INTENT_JOURNEYS = { 信息型: ['探索'], 商业调研型: ['选型', '对比'], 交易型: ['选型', '对比'], 导航型: ['口碑'] };
+const intentOf = (s) => INTENT_ALIASES.get(String(s || '').trim().toLowerCase()) || (KEYWORD_INTENTS.includes(String(s || '').trim()) ? String(s).trim() : '');
+
+// Keywords are the layer above questions: a question is a sentence built on one of these words. The
+// table is checked on its own (does every scenario have a word a buyer would type when choosing?)
+// and against questions.csv (does every word actually get asked?).
+export function checkKeywords(text, { brands = [], questions = '', lang = 'zh' } = {}) {
+  const zh = lang !== 'en';
+  const rows = parseCsv(text).filter((r) => (r['关键词'] || r.keyword || r['词'] || '').trim());
+  const fails = []; const warns = []; let passed = 0;
+  const fail = (id, msg) => fails.push({ id, msg });
+  const warn = (id, msg) => warns.push({ id, msg });
+  const seen = new Map();
+  const byScenario = new Map(); const byIntent = { 信息型: 0, 商业调研型: 0, 交易型: 0, 导航型: 0 };
+  const clusters = new Map();
+  const noPage = [];
+  const list = [];
+  const brandNames = brands.map((b) => b.name).filter(Boolean);
+
+  for (const r of rows) {
+    const word = (r['关键词'] || r.keyword || r['词'] || '').trim();
+    const id = (r.id || r.ID || word).trim();
+    const scenario = (r['场景'] || r.scenario || '').trim();
+    const intent = intentOf(r['意图'] || r.intent);
+    const journey = (r['旅程'] || r.journey || '').trim();
+    const cluster = (r['聚类'] || r.cluster || '').trim();
+    const page = (r['落地页'] || r.landing || r.page || '').trim();
+    const source = (r['来源'] || r.source || '').trim();
+    const grade = (r['证据等级'] || r.grade || '').trim();
+    list.push({ id, word, scenario, intent, journey, cluster, page });
+
+    const key = normQ(word);
+    if (seen.has(key)) fail(id, zh ? `关键词「${word}」重复（与 ${seen.get(key)} 相同）` : `Duplicate keyword "${word}" (same as ${seen.get(key)})`);
+    else seen.set(key, id);
+
+    if (!scenario) warn(id, zh ? `「${word}」没填场景：不知道它属于哪条业务线，覆盖率就算不出来` : `"${word}" has no scenario`);
+    else byScenario.set(scenario, (byScenario.get(scenario) || 0) + 1);
+
+    if (!intent) fail(id, zh ? `意图「${r['意图'] || r.intent || ''}」不是四类之一：信息型 / 商业调研型 / 交易型 / 导航型` : `Intent must be one of the four standard types`);
+    else byIntent[intent] += 1;
+
+    const allowed = intent ? INTENT_JOURNEYS[intent] : null;
+    if (journey && !JOURNEYS.includes(journey)) warn(id, zh ? `旅程「${journey}」不是 探索 / 选型 / 对比 / 口碑` : `Unknown journey "${journey}"`);
+    if (journey && allowed && !allowed.includes(journey)) warn(id, zh ? `「${word}」是${intent}词，却标成${journey}段：${intent}词一般落在 ${allowed.join(' / ')}` : `Intent ${intent} usually belongs to ${allowed.join(' / ')}`);
+
+    if (!cluster) warn(id, zh ? `「${word}」没填聚类：同一批搜索结果（SERP 重叠）才算一组，不分组会把同一个需求数成好几个` : `"${word}" has no cluster`);
+    else {
+      if (!clusters.has(cluster)) clusters.set(cluster, []);
+      clusters.get(cluster).push({ id, journey });
+    }
+
+    if (!page) noPage.push(word);
+    else if (/^(缺|无|none|todo)$/i.test(page)) noPage.push(word);
+    if (!source) warn(id, zh ? `「${word}」没填来源：分不清是客户原话还是自己编的` : `"${word}" has no source`);
+    if (grade && !/^[1-5]$/.test(grade)) fail(id, zh ? `证据等级「${grade}」必须是 1–5` : `Grade "${grade}" must be 1–5`);
+    if (!grade) warn(id, zh ? `「${word}」没填证据等级（1 客户原话 / 2 社区原话 / 3 平台追问 / 4 公开数据 / 5 构造）` : `"${word}" has no grade`);
+
+    if (brandNames.length && intent === '信息型' && brandNames.some((b) => word.includes(b))) fail(id, zh ? `「${word}」是信息型词却带品牌名：信息型要求买家还不知道你` : `Informational keyword "${word}" contains the brand`);
+    if (intent === '导航型' && brandNames.length && !brandNames.some((b) => word.includes(b))) warn(id, zh ? `「${word}」标成导航型却没有品牌名：导航型是直接找某个牌子` : `Navigational keyword "${word}" has no brand name`);
+    if (!fails.some((f) => f.id === id) && !warns.some((w) => w.id === id)) passed += 1;
+  }
+
+  if (!rows.length) {
+    fail('—', zh ? '关键词表是空的：先有关键词，才有问题' : 'Keyword table is empty: keywords come before questions');
+  }
+
+  // One cluster is one need. A cluster whose words sit in different stages means the grouping is
+  // wrong, because those words would be answered by different pages.
+  for (const [name, items] of clusters) {
+    const stages = new Set(items.map((i) => i.journey).filter(Boolean));
+    if (stages.size > 1) warn(name, zh ? `聚类「${name}」里跨了 ${[...stages].join(' / ')}：同一组词应该落在同一段` : `Cluster "${name}" spans ${[...stages].join(' / ')}`);
+  }
+
+  // Every scenario needs at least one word a buyer types when choosing; otherwise the scenario is
+  // only being explored, never converted. Brand words are exempt: they sit above the scenarios.
+  const scenarios = [...new Set(rows.map((r) => (r['场景'] || r.scenario || '').trim()).filter(Boolean))];
+  for (const s of scenarios) {
+    const words = list.filter((k) => k.scenario === s);
+    const business = words.filter((k) => k.intent !== '导航型');
+    const choosing = business.filter((k) => k.intent === '商业调研型' || k.intent === '交易型');
+    if (business.length && !choosing.length) warn(s, zh ? `场景「${s}」没有商业调研型或交易型词：只探索不选型，客户真在挑的时候看不到你` : `Scenario "${s}" has no commercial or transactional keyword`);
+  }
+  if (!list.some((k) => k.intent === '导航型')) warn('—', zh ? '整表没有导航型词：AI 被问「这牌子怎么样」时没有词可挂' : 'No navigational keyword: nothing to attach "is this brand any good" to');
+  if (noPage.length) {
+    const head = noPage.slice(0, 8).join('、');
+    warn('—', zh
+      ? `${noPage.length} 个词没有落地页：${head}${noPage.length > 8 ? ' 等' : ''}——AI 要引用的时候没有页面可引，这是内容任务清单`
+      : `${noPage.length} keywords have no landing page: ${head}${noPage.length > 8 ? ' …' : ''}`);
+  }
+
+  // Cross-file coverage, both directions.
+  const gaps = []; const orphans = [];
+  if (questions) {
+    const asked = loadQuestions(questions).asked;
+    const qRows = parseCsv(questions).filter((r) => (r['问题'] || r.question || '').trim());
+    const textOf = qRows.map((r) => `${r['关键词'] || r.keyword || ''}\u0000${r['问题'] || r.question || ''}`).join('\n');
+    for (const k of list) {
+      const key = normQ(k.word);
+      const hit = textOf.split('\n').some((line) => {
+        const [kw, q] = line.split('\u0000');
+        return normQ(kw) === key || (q || '').includes(k.word);
+      });
+      if (!hit) gaps.push(k.word);
+    }
+    const declared = new Set(list.map((k) => normQ(k.word)));
+    for (const r of qRows) {
+      const kw = (r['关键词'] || r.keyword || '').trim();
+      if (kw && !declared.has(normQ(kw))) orphans.push(`${r.id || ''}·${kw}`);
+    }
+    if (gaps.length) warn('—', zh ? `这些词一题都没有：${gaps.join('、')}` : `Keywords with no question: ${gaps.join(', ')}`);
+    if (orphans.length) warn('—', zh ? `这些题挂的词不在词表里：${orphans.join('、')}` : `Questions carrying undeclared keywords: ${orphans.join(', ')}`);
+    if (!asked.length) warn('—', zh ? '题集里没有已填写的题，覆盖率无法核对' : 'No filled questions to check coverage against');
+    if (!qRows.some((r) => (r['关键词'] || r.keyword || '').trim())) warn('—', zh ? '题集没有「关键词」列：只能按整句包含来判断覆盖，容易漏' : 'No 关键词 column in the questions file');
+  }
+
+  return { rows: list, scenarios, clusters: [...clusters.keys()], byIntent, fails, warns, passed, gaps, orphans, matched: Boolean(questions) };
+}
+
+export function renderKeywords(result, file, lang = 'zh') {
+  const zh = lang !== 'en';
+  const { rows, scenarios, clusters, byIntent, fails, warns, passed, gaps } = result;
+  const L = [];
+  L.push(zh ? `关键词表体检 · ${file}` : `Keyword table audit · ${file}`, '');
+  L.push(zh ? `- 词量：${rows.length} 个（${scenarios.length} 个场景、${clusters.length} 个聚类）` : `- Keywords: ${rows.length} (${scenarios.length} scenarios, ${clusters.length} clusters)`);
+  L.push(zh
+    ? `- 意图：信息型 ${byIntent['信息型']} · 商业调研型 ${byIntent['商业调研型']} · 交易型 ${byIntent['交易型']} · 导航型 ${byIntent['导航型']}`
+    : `- Intents: informational ${byIntent['信息型']} · commercial ${byIntent['商业调研型']} · transactional ${byIntent['交易型']} · navigational ${byIntent['导航型']}`);
+  if (result.matched) L.push(zh ? `- 与题集对齐：${gaps.length ? `${gaps.length} 个词没有题` : '每个词都有题'}` : `- Against questions: ${gaps.length ? `${gaps.length} keywords unasked` : 'every keyword is asked'}`);
+  L.push('');
+  if (fails.length) {
+    L.push(zh ? '**fail（先改这些，词表错了后面全错）**' : '**fail (fix first; a wrong table poisons everything after)**', '');
+    for (const f of fails) L.push(`- ${f.id && f.id !== '—' ? `[${f.id}] ` : ''}${f.msg}`);
+    L.push('');
+  }
+  if (warns.length) {
+    L.push(zh ? '**warn（可以保留，但要在报告里写清为什么）**' : '**warn (allowed, but say why in the report)**', '');
+    for (const w of warns) L.push(`- ${w.id && w.id !== '—' ? `[${w.id}] ` : ''}${w.msg}`);
+    L.push('');
+  }
+  L.push(fails.length
+    ? (zh ? `结果：${fails.length} 项必须改，${warns.length} 项提醒。改完再跑一次。` : `${fails.length} must fix, ${warns.length} to review.`)
+    : (zh ? `结果：没有必须改的问题，${warns.length} 项提醒。可以把词写成题了。` : `No blockers, ${warns.length} to review. Ready to write questions.`));
+  if (passed) L.push(zh ? `（另有 ${passed} 项通过）` : `(${passed} checks passed)`);
   return L.join('\n');
 }
 
@@ -734,7 +909,20 @@ export async function main(argv, { env = process.env, out = console.log, err = c
   const t = M[lang];
   if (o.version) { out(VERSION); return 0; }
   if (o.help || !o.cmd || o.unknown) { out(t.usage); return o.help ? 0 : 2; }
-  if (!['run', 'report', 'check', 'matrix'].includes(o.cmd)) { err(t.unknownCmd(o.cmd)); out(t.usage); return 2; }
+  if (!['run', 'report', 'check', 'matrix', 'keywords'].includes(o.cmd)) { err(t.unknownCmd(o.cmd)); out(t.usage); return 2; }
+
+  if (o.cmd === 'keywords') {
+    if (!o.file) { err(t.need('<keywords.csv>')); return 2; }
+    const file = resolve(o.file);
+    if (!existsSync(file)) { err(t.noFile(o.file)); return 2; }
+    const qFile = o.questions ? resolve(o.questions) : '';
+    if (qFile && !existsSync(qFile)) { err(t.noFile(o.questions)); return 2; }
+    const brands = (o.brand || '').split(/[,，]/).map((x) => x.trim()).filter(Boolean).map((n) => ({ name: n, aliases: [n] }));
+    const result = checkKeywords(readFileSync(file, 'utf8'), { brands, questions: qFile ? readFileSync(qFile, 'utf8') : '', lang });
+    if (o.json) { out(JSON.stringify({ ...result, rows: result.rows.length }, null, 2)); return result.fails.length ? 1 : 0; }
+    out(renderKeywords(result, o.file, lang));
+    return result.fails.length ? 1 : 0;
+  }
 
   if (o.cmd === 'matrix') {
     if (!o.file) { err(t.need('<questions.csv>')); return 2; }

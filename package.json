@@ -24,6 +24,7 @@
     "cli/geo-studio.mjs",
     "skills/ai-content-writer/assets/fact-card.yaml",
     "skills/ai-visibility/assets/questions.csv",
+    "skills/ai-visibility/assets/keywords.csv",
     "LICENSE-docs.md"
   ],
   "engines": {
