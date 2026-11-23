@@ -1,0 +1,158 @@
+# 事实卡 · GEO 医生自己（第一个病人）
+# 用 GEO 医生给 GEO 医生做 GEO：真实全流程测试和公开疗效记录都用这张卡。
+# 每条来源都指向本仓库里可以核对的文件；维护者改动功能时同步更新。
+
+基本信息:
+  - 编号: B01
+    项目: 名称
+    内容: "GEO 医生"
+    来源: "README.md 标题"
+    状态: 已确认
+  - 编号: B02
+    项目: 别名
+    内容: ["geo-doctor", "GEO Doctor"]
+    来源: "README.md、package.json name"
+    状态: 已确认
+  - 编号: B03
+    项目: 一句话说明
+    内容: "开源的 GEO（生成式引擎优化）工具：查出 AI 推荐了哪些竞品、为什么不推荐你，按事实卡写 AI 愿意引用的内容，并用推荐率复查效果"
+    来源: "README.md 开头"
+    状态: 已确认
+  - 编号: B04
+    项目: 类型
+    内容: "Agent Skill（装进 AI 助手使用）和零依赖的 Node.js 命令行工具、本地网页工作台"
+    来源: "README.md、package.json bin"
+    状态: 已确认
+  - 编号: B05
+    项目: 官网
+    内容: "https://github.com/Fangx-AI/geo-doctor"
+    来源: "package.json homepage"
+    状态: 已确认
+
+适合谁:
+  - 编号: U01
+    人群: "做软件、App、网站、小程序和线上产品的团队或个人"
+    场景: "想知道豆包、DeepSeek、ChatGPT 等 AI 会不会推荐自己的产品，并按缺口补内容"
+    来源: "README.md「它会做什么」"
+    状态: 已确认
+  - 编号: U02
+    人群: "不想搭服务器、预算有限的小团队"
+    场景: "用一句话装进 AI 助手，或在自己电脑上打开网页工作台"
+    来源: "README.md「免费开源 · 不用服务器」、cli/geo-studio.mjs"
+    状态: 已确认
+
+不适合谁:
+  - 编号: N01
+    内容: "想要保证 AI 排名或推荐结果的人：GEO 医生不承诺排名，只用推荐次数如实复查"
+    来源: "skills/geo-doctor/references/compliance.md"
+    状态: 已确认
+  - 编号: N02
+    内容: "需要每天批量生产大量文章的内容工厂：GEO 医生只针对 AI 没推荐你的问题写稿"
+    来源: "cli/geo-autopilot.mjs（默认每周最多 3 篇）"
+    状态: 已确认
+  - 编号: N03
+    内容: "本地门店：目前只支持软件、App、网站、小程序和线上产品"
+    来源: "README.md「目前支持」"
+    状态: 已确认
+
+核心能力:
+  - 编号: F01
+    能力: "体检网站能不能被 AI 搜索读到：robots.txt、AI 爬虫、noindex、正文是否可见"
+    限制: "只查技术可读性，不判断内容质量"
+    来源: "cli/geo-audit.mjs"
+    状态: 已确认
+  - 编号: F02
+    能力: "用 API 自动问 DeepSeek、通义千问、Kimi、豆包、元宝、ChatGPT、Perplexity、Gemini、Claude，统计谁被推荐"
+    限制: "API 回答不登录、多数不联网，可能和 App 里不同；重要结论要在 App 里人工确认"
+    来源: "cli/geo-probe.mjs、README.md"
+    状态: 已确认
+  - 编号: F03
+    能力: "找出竞品被推荐、你没被推荐的问题，每个 AI 分开算"
+    限制: "需要先有采样记录"
+    来源: "cli/geo-autopilot.mjs gaps"
+    状态: 已确认
+  - 编号: F04
+    能力: "只用事实卡里已确认的事实写稿，自动检查占位符、夸大词、未确认事实和重复稿"
+    限制: "稿件要人审核后才发布"
+    来源: "cli/geo-autopilot.mjs write、cli/geo-publish.mjs check"
+    状态: 已确认
+  - 编号: F05
+    能力: "用事实卡生成 AI 能读懂的事实站（事实页、常见问题、llms.txt、结构化数据），可免费放到 GitHub Pages"
+    限制: "只收已确认的事实"
+    来源: "cli/geo-site.mjs"
+    状态: 已确认
+  - 编号: F06
+    能力: "每周自动复查：采样、给新缺口写稿、出疗效报告，并开一个 PR 给人审"
+    限制: "需要放在 GitHub 上并配置 API Key"
+    来源: "cli/geo-autopilot.mjs action"
+    状态: 已确认
+  - 编号: F07
+    能力: "本地网页工作台：看推荐趋势和缺口、确认事实、逐篇审稿、一键运行"
+    限制: "默认只在本机打开；放到服务器上要设置口令并加 HTTPS"
+    来源: "cli/geo-studio.mjs"
+    状态: 已确认
+  - 编号: F08
+    能力: "从官网和产品资料里抽事实，每条必须逐字引用原文，原文里找不到的直接丢弃"
+    限制: "抽出的事实是待确认状态，要人确认后才能用"
+    来源: "cli/geo-facts.mjs"
+    状态: 已确认
+
+价格:
+  - 编号: P01
+    项目: 免费版或试用
+    内容: "完全免费，MIT 开源许可；调用各家 AI 的 API 费用由你自己的账号支付"
+    来源: "LICENSE、README.md"
+    状态: 已确认
+
+使用条件:
+  - 编号: C01
+    项目: 支持平台
+    内容: ["Claude Code", "Codex", "Kimi Code", "支持上传技能包的 AI 客户端", "Node.js 18 及以上的命令行"]
+    来源: "README.md 安装、package.json engines"
+    状态: 已确认
+  - 编号: C02
+    项目: 地区或语言
+    内容: ["中文", "英文"]
+    来源: "README.md、README.en.md"
+    状态: 已确认
+
+明确不支持:
+  - 编号: X01
+    内容: "不会替你发布到知乎、公众号、小红书等第三方平台：只排好版，由你本人点发布"
+    来源: "cli/geo-publish.mjs pack"
+    状态: 已确认
+  - 编号: X02
+    内容: "不保证 AI 排名，不刷量，不写虚假评价"
+    来源: "skills/geo-doctor/references/compliance.md"
+    状态: 已确认
+
+数据与安全:
+  - 编号: S01
+    项目: 数据存储位置
+    内容: "所有数据都是你项目里 geo/ 文件夹的普通文件，没有数据库，不上传到 GEO 医生的服务器（GEO 医生没有服务器）"
+    来源: "cli/geo-studio.mjs、README.md"
+    状态: 已确认
+  - 编号: S02
+    项目: 密钥
+    内容: "API Key 和 WordPress 密码只从环境变量读取，不写进命令和文件"
+    来源: "cli/geo-probe.mjs、cli/geo-publish.mjs"
+    状态: 已确认
+
+和同类产品的区别:
+  - 编号: D01
+    对比对象: "GEOFlow"
+    区别: "GEOFlow 是需要 Docker、PostgreSQL、Redis 的自托管内容生产平台（AGPL-3.0）；GEO 医生不需要服务器（MIT），侧重直接问 AI 推荐谁、找缺口、按事实写稿并复查推荐次数"
+    来源: "GEOFlow 公开文档（2026-10-20 查阅）、本仓库 README.md"
+    状态: 已确认
+
+公开证据:
+  - 编号: E01
+    类型: "源代码仓库"
+    地址: "https://github.com/Fangx-AI/geo-doctor"
+    日期: "2026-10-20"
+    状态: 已确认
+
+维护:
+  确认人: "geo-doctor 维护者"
+  确认日期: "2026-10-20"
+  下次复核: "每次发布新版本时"
